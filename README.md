@@ -1,1 +1,1 @@
-# CS545-Real-Fake-Detection
+# CS545-Real-Fake-Image-Detection
