@@ -170,7 +170,7 @@ if __name__ == "__main__":
     # download all image annotations
     download_metadata(all_metadata_subdirs, args.repo_id, args.local_dataset_path)
     # download all images in jpg format 
-    download_image_files_as_jpg([[all_image_subdirs[1][1]]], args.repo_id, args.local_dataset_path)
+    download_image_files_as_jpg(all_image_subdirs, args.repo_id, args.local_dataset_path)
 
 
 
