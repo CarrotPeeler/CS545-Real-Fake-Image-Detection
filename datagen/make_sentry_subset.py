@@ -179,7 +179,6 @@ def generate_metadata(jpg_paths_by_source:dict, local_dataset_path):
         metadata_path = k.replace("ImageData", "MetaData").rpartition('/')[0]
 
         with open(f"{local_dataset_path}/{metadata_path}/{dataset_name}.csv", "a+") as f:
-            print()
             f.writelines(jpg_paths)
             
 
