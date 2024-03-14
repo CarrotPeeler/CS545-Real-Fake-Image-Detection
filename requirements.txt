@@ -1,3 +1,4 @@
 tqdm
 huggingface_hub
 glob2
+img2dataset
