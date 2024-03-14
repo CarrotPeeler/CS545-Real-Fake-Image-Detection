@@ -1,6 +1,7 @@
 import os
 import shutil
 import argparse
+from glob import glob
 from tqdm.auto import tqdm
 from huggingface_hub import hf_hub_download, list_repo_tree
 
@@ -27,18 +28,21 @@ def filter_redundant_paths(subdirs):
 def filter_imagedata_subset(files, train_reduce_factor, val_reduce_factor):
     """
     Creates a subset of files
-        if files are for train data, reduce sample size by train_reduce_factor
-        if files are for val data, reduce sample size by val_reduce_factor
+        if files are for train data, reduce sample size to train_reduce_factor
+        if files are for val data, reduce sample size to val_reduce_factor
     args:
         files: list of tar files for one image data source
     """
     files_subset = []
+    train_end_idx = max(int(train_reduce_factor*len(files)), 1)
+    val_end_idx = max(int(val_reduce_factor*len(files)), 1)
+
     if "MetaData" in files[0] or len(files) == 1: # if metadata or only 1 file, return as is
         return files
     elif "ImageData/train" in files[0]:
-        files_subset = files[0:int(len(files)/train_reduce_factor)]
+        files_subset = files[0:train_end_idx]
     elif "ImageData/val" in files[0]:
-        files_subset = files[0:int(len(files)/val_reduce_factor)]
+        files_subset = files[0:val_end_idx]
     return files_subset
 
 
@@ -75,26 +79,38 @@ def recreate_file_struct_locally(dataset_path, image_dir_name, metadata_dir_name
     return all_image_subdirs, all_metadata_subdirs # list of all subdir paths and csvs for each data source
 
 
-def batch_convert_png_jpg(png_dir, out_dir):
-    png_paths = list(map(lambda x: f"{png_dir}/{x}", os.listdir(png_dir)))
+def batch_convert_png_jpg(png_paths):
+    """
+    Batch convert png files to jpg format
 
-    with open(png_dir + "/ffmpeg_commands.sh", 'a+') as f:
-        for png_path in png_paths:
-            jpg_path = f"{out_dir}/{png_path.rpartition('/')[-1].partition('.')[0]}.jpg" 
-            f.writelines(f"ffmpeg -loglevel quiet -i {png_path} {jpg_path}\n")
+    args:
+        png_paths: list of string paths to png files
+    returns:
+        jpg_paths: list of string paths where jpgs saved
+    """
+    temp_dir = png_paths[0].rpartition('/')[0]
+    jpg_paths = list(map(lambda x: x.replace("-temp", ""), png_paths))
+    jpg_paths = list(map(lambda x: f"{x.rpartition('.')[0]}.jpg", jpg_paths))
+    with open(temp_dir + "/ffmpeg_commands.sh", 'a+') as f:
+        for i in range(len(png_paths)):
+            f.writelines(f"ffmpeg -loglevel quiet -i {png_paths[i]} {jpg_paths[i]}\n")
     
     # parallelize ffmpeg commands
-    os.system(f"parallel --eta < {png_dir}/ffmpeg_commands.sh")
+    os.system(f"parallel --eta < {temp_dir}/ffmpeg_commands.sh")
+    return jpg_paths
 
 
 def download_image_files_as_jpg(all_subdirs,
                                 repo_id, 
                                 local_dataset_dir, 
-                                train_reduce_factor=8, 
-                                val_reduce_factor=2):
+                                train_reduce_factor=.125, 
+                                val_reduce_factor=.5):
+    jpg_paths_by_source = {}
+
     for i in tqdm(range(len(all_subdirs))):
         for subdir in all_subdirs[i]:
-            os.system(f"echo DATASET: {subdir.rpartition('/')[-1]}")
+            dataset_name = subdir.rpartition('/')[-1]
+            os.system(f"echo DATASET: {dataset_name}")
             files = list(list_repo_tree(repo_id=repo_id, 
                                         repo_type="dataset", 
                                         path_in_repo=subdir,
@@ -133,31 +149,36 @@ def download_image_files_as_jpg(all_subdirs,
                 os.remove(file_path)
             os.remove(f"{fname}.tar.gz")
 
+            # locate all png files from extracted subdirs
+            png_paths = glob(f"{temp_save_dir}/**/*.png", recursive=True)
+
+            # recreate subdirs in save_dir if necessary
+            extracted_subdirs = list(set(map(lambda x: x.rpartition('/')[0], png_paths)))
+            extracted_subdirs = list(map(lambda x: x.replace("-temp", ""), extracted_subdirs))
+            for ext_dir in extracted_subdirs:
+                os.makedirs(ext_dir, exist_ok=True)
+
             # batch convert from png to jpg
-            batch_convert_png_jpg(temp_save_dir, save_dir)
+            jpg_paths = batch_convert_png_jpg(png_paths)
+            jpg_paths_by_source[subdir] = jpg_paths
 
             # remove temp dir of png imgs after finishing conversion
             shutil.rmtree(temp_save_dir) 
+    return jpg_paths_by_source
 
 
-def download_metadata(all_metadata_subdirs, repo_id, local_dataset_dir):
-    """Download metadata annotations for image data"""
-    for subdir in all_metadata_subdirs:
-        subdir = subdir[0]
-        csv_files = list(list_repo_tree(repo_id=repo_id, 
-                                        repo_type="dataset", 
-                                        path_in_repo=subdir,
-                                        recursive=True))
-        csv_files = list(map(lambda x:x.path, csv_files))
-        csv_files = filter_hidden_files(csv_files)
+def generate_metadata(jpg_paths_by_source:dict, local_dataset_path):
+    """Generate metadata annotations for image data"""
+    for k,v in jpg_paths_by_source.items():
+        # add target label 0 (fake) and newline char
+        jpg_paths = list(map(lambda x: f"{x} 0\n", v))
 
-        for csv_file in csv_files:
-            local_save_dir = f"{local_dataset_dir}/{csv_file.rpartition('/')[0]}"
-            # download csv files from HuggingFace
-            hf_hub_download(repo_id=repo_id, 
-                            repo_type="dataset",
-                            filename=csv_file,
-                            local_dir=local_save_dir)
+        dataset_name = k.rpartition('/')[-1]
+        metadata_path = k.replace("ImageData", "MetaData").rpartition('/')[0]
+
+        with open(f"{local_dataset_path}/{metadata_path}/{dataset_name}.csv", "a+") as f:
+            print()
+            f.writelines(jpg_paths)
             
 
 if __name__ == "__main__":
@@ -177,10 +198,12 @@ if __name__ == "__main__":
                                                                            args.image_dir, 
                                                                            args.metadata_dir, 
                                                                            args.repo_id)
-    # download all image annotations
-    download_metadata(all_metadata_subdirs, args.repo_id, args.local_dataset_path)
     # download all images in jpg format 
-    download_image_files_as_jpg([[all_image_subdirs[1][2]]], args.repo_id, args.local_dataset_path)
+    jpg_paths_by_source = download_image_files_as_jpg(all_image_subdirs, 
+                                                      args.repo_id, 
+                                                      args.local_dataset_path)
+    # generate all image annotations
+    generate_metadata(jpg_paths_by_source, args.local_dataset_path)
 
 
 
