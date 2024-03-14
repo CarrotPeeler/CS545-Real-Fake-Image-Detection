@@ -86,13 +86,15 @@ def batch_convert_png_jpg(png_dir, out_dir):
     # parallelize ffmpeg commands
     os.system(f"parallel --eta < {png_dir}/ffmpeg_commands.sh")
 
+
 def download_image_files_as_jpg(all_subdirs,
                                 repo_id, 
                                 local_dataset_dir, 
-                                train_reduce_factor=4, 
+                                train_reduce_factor=8, 
                                 val_reduce_factor=2):
     for i in tqdm(range(len(all_subdirs))):
         for subdir in all_subdirs[i]:
+            os.system(f"echo DATASET: {subdir.rpartition('/')[-1]}")
             files = list(list_repo_tree(repo_id=repo_id, 
                                         repo_type="dataset", 
                                         path_in_repo=subdir,
@@ -103,9 +105,13 @@ def download_image_files_as_jpg(all_subdirs,
             # develop subset of files 
             files = filter_imagedata_subset(files, train_reduce_factor, val_reduce_factor)
 
+            save_dir = f"{local_dataset_dir}/{subdir}" # dir where jpg images stored
+            temp_save_dir = f"{save_dir}-temp" # temp dir where png images stored
+            os.makedirs(temp_save_dir, exist_ok=True)
+
+            # download all image files for a single data source
             for file in files:
-                save_dir = f"{local_dataset_dir}/{file.rpartition('/')[0]}"
-                temp_save_dir = f"{save_dir}-temp"
+                os.system(f"echo DOWNLOADING: {file.rpartition('/')[-1]}")
                 file_path = f"{local_dataset_dir}/{file}"
 
                 # download tar files from HuggingFace
@@ -113,21 +119,25 @@ def download_image_files_as_jpg(all_subdirs,
                                 repo_type="dataset",
                                 filename=file,
                                 local_dir=local_dataset_dir)
-                
-                # unarchive tar file images to same location
-                os.system(f"mkdir {temp_save_dir} && \
-                          tar -xf {file_path} \
-                          --strip-components 1 \
-                          -C {temp_save_dir}")
-                
-                # remove original tar file to reduce space
+            
+            # cat all tar files together and unarchive cat'd tar file
+            fname = f"{local_dataset_dir}/{file.partition('.')[0]}"
+            os.system(f"cat {fname}.tar.gz.* > {fname}.tar.gz; \
+                        tar -xf {fname}.tar.gz \
+                        --strip-components 1 \
+                        -C {temp_save_dir}")
+            
+            # remove original tar files and final one to reduce space
+            for file in files:
+                file_path = f"{local_dataset_dir}/{file}"
                 os.remove(file_path)
+            os.remove(f"{fname}.tar.gz")
 
-                # batch convert from png to jpg
-                batch_convert_png_jpg(temp_save_dir, save_dir)
+            # batch convert from png to jpg
+            batch_convert_png_jpg(temp_save_dir, save_dir)
 
-                # remove temp dir of png imgs after finishing conversion
-                shutil.rmtree(temp_save_dir) 
+            # remove temp dir of png imgs after finishing conversion
+            shutil.rmtree(temp_save_dir) 
 
 
 def download_metadata(all_metadata_subdirs, repo_id, local_dataset_dir):
@@ -170,7 +180,7 @@ if __name__ == "__main__":
     # download all image annotations
     download_metadata(all_metadata_subdirs, args.repo_id, args.local_dataset_path)
     # download all images in jpg format 
-    download_image_files_as_jpg(all_image_subdirs, args.repo_id, args.local_dataset_path)
+    download_image_files_as_jpg([[all_image_subdirs[1][2]]], args.repo_id, args.local_dataset_path)
 
 
 
