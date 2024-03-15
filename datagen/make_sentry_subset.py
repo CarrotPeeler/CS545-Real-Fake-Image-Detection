@@ -169,11 +169,11 @@ def download_image_files_as_jpg(all_subdirs,
     return jpg_paths_by_source
 
 
-def generate_metadata(jpg_paths_by_source:dict, local_dataset_path):
+def generate_metadata(jpg_paths_by_source:dict, local_dataset_path, label=0):
     """Generate metadata annotations for image data"""
     for k,v in jpg_paths_by_source.items():
         # add target label 0 (fake) and newline char
-        jpg_paths = list(map(lambda x: f"{x} 0\n", v))
+        jpg_paths = list(map(lambda x: f"{x} {label}\n", v))
 
         dataset_name = k.rpartition('/')[-1]
         metadata_path = "MetaData/train" if "train" in k else "MetaData/val"
@@ -204,7 +204,7 @@ if __name__ == "__main__":
                                                       args.repo_id, 
                                                       args.local_dataset_path)
     # generate all image annotations
-    generate_metadata(jpg_paths_by_source, args.local_dataset_path)
+    generate_metadata(jpg_paths_by_source, args.local_dataset_path, label=0)
 
 
 
