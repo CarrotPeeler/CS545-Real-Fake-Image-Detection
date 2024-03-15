@@ -136,7 +136,7 @@ def download_image_files_as_jpg(all_subdirs,
                                 local_dir_use_symlinks=False)
                 
             fname = f"{local_dataset_dir}/{file.partition('.')[0]}"
-            if filesNumbered:
+            if filesNumbered: # handle non-numbered tar files 
                 # cat all tar files together
                 os.system(f"cat {fname}.tar.gz.* > {fname}.tar.gz")
                 
@@ -152,6 +152,7 @@ def download_image_files_as_jpg(all_subdirs,
 
             # locate all png files from extracted subdirs
             png_paths = glob(f"{temp_save_dir}/**/*.png", recursive=True)
+            # png_paths = glob(f"{save_dir}/**/*.jpg", recursive=True)
 
             # recreate subdirs in save_dir if necessary
             extracted_subdirs = list(set(map(lambda x: x.rpartition('/')[0], png_paths)))
@@ -175,7 +176,7 @@ def generate_metadata(jpg_paths_by_source:dict, local_dataset_path):
         jpg_paths = list(map(lambda x: f"{x} 0\n", v))
 
         dataset_name = k.rpartition('/')[-1]
-        metadata_path = k.replace("ImageData", "MetaData").rpartition('/')[0]
+        metadata_path = "MetaData/train" if "train" in k else "MetaData/val"
 
         with open(f"{local_dataset_path}/{metadata_path}/{dataset_name}.csv", "a+") as f:
             f.writelines(jpg_paths)
@@ -198,7 +199,6 @@ if __name__ == "__main__":
                                                                            args.image_dir, 
                                                                            args.metadata_dir, 
                                                                            args.repo_id)
-    print(all_image_subdirs)
     # download all images in jpg format 
     jpg_paths_by_source = download_image_files_as_jpg(all_image_subdirs, 
                                                       args.repo_id, 

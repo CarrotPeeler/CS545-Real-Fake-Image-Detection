@@ -3,14 +3,7 @@ import argparse
 from img2dataset import download
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--num_cores", type=int, default=10, 
-                        help="number of cpu cores your system has")
-    parser.add_argument("--total_threads", type=int, default=20, 
-                        help="number of cpu threads total")
-    args = parser.parse_args()
-
+def download_cc3m():
     cc3m_train_anno = "datagen/cc3m/Train_GCC-training.tsv"
     cc3m_val_anno = "datagen/cc3m/Validation_GCC-1.1.0-Validation.tsv"
     cc3m_train_dir = "./sentry-dataset/ImageData/train/CC3M"
@@ -34,3 +27,32 @@ if __name__ == "__main__":
             number_sample_per_shard=1000,
             distributor="multiprocessing",
         )
+
+
+def download_ffhq():
+    pass
+
+
+def download_afhq_v2():
+    pass
+
+
+def download_celeba_hq():
+    pass
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--num_cores", type=int, default=10, 
+                        help="number of cpu cores your system has")
+    parser.add_argument("--total_threads", type=int, default=20, 
+                        help="number of cpu threads total")
+    args = parser.parse_args()
+
+    download_cc3m()
+    download_ffhq()
+    download_afhq_v2
+    download_celeba_hq()
+
+
+    
