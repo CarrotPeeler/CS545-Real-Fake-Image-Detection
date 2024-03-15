@@ -7,7 +7,7 @@ pip install -r requirements.txt
 ```
 
 ## Getting the Data
-We use a subset of the [Sentry dataset](https://huggingface.co/datasets/InfImagine/FakeImageDataset) for training and testing models. All images are compressed as JPGs to reduce size and mimic the format used most commonly for uploading images to websites and the internet. 
+We use a subset of the [Sentry dataset](https://huggingface.co/datasets/InfImagine/FakeImageDataset) for training and testing models. All images are compressed as JPGs to reduce size and mimic the format used most commonly for uploading images to websites and the internet. The subset we partition contains 240k fake and 240k real images.
 
 ```bash
 cd CS545-Real-Fake-Image-Detection
@@ -20,7 +20,7 @@ python3 datagen/make_sentry_subset.py < /dev/null > log.txt 2>&1 &
 ```
 For real image data, we use CC3M (Google Conceptual Captions), FFHQ, and AFHQv2 for training, and CC3M and CelebA-HQ for testing. 
 
-For CC3M, we use 200k of the train images and all of the val images.
+For CC3M, we use 155k of the train images and all of the val images. 
 
 Run the following script to download all real data components:
 ```bash
