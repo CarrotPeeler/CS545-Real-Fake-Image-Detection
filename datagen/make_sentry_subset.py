@@ -48,9 +48,6 @@ def filter_imagedata_subset(files, train_reduce_factor, val_reduce_factor):
 
 def recreate_file_struct_locally(dataset_path, image_dir_name, metadata_dir_name, repo_id):
     """Locally reconstructs the folder structure for a dataset repo from HuggingFace Data Servers"""
-    if os.path.exists(dataset_path):
-        shutil.rmtree(dataset_path)
-
     os.makedirs(dataset_path, exist_ok=True)
 
     all_image_subdirs = []
@@ -117,6 +114,7 @@ def download_image_files_as_jpg(all_subdirs,
                                         recursive=True))
             files = list(map(lambda x:x.path, files))
             files = filter_hidden_files(files)
+            filesNumbered = True if len(files) > 1 else False
 
             # develop subset of files 
             files = filter_imagedata_subset(files, train_reduce_factor, val_reduce_factor)
@@ -136,15 +134,16 @@ def download_image_files_as_jpg(all_subdirs,
                                 filename=file,
                                 local_dir=local_dataset_dir, 
                                 local_dir_use_symlinks=False)
-            
-            # cat all tar files together
+                
             fname = f"{local_dataset_dir}/{file.partition('.')[0]}"
-            os.system(f"cat {fname}.tar.gz.* > {fname}.tar.gz")
-            
-            # remove original tar files to reduce space
-            for file in files:
-                file_path = f"{local_dataset_dir}/{file}"
-                os.remove(file_path)
+            if filesNumbered:
+                # cat all tar files together
+                os.system(f"cat {fname}.tar.gz.* > {fname}.tar.gz")
+                
+                # remove original tar files to reduce space
+                for file in files:
+                    file_path = f"{local_dataset_dir}/{file}"
+                    os.remove(file_path)
 
             # extract final tar
             os.system(f"tar -xf {fname}.tar.gz --strip-components 1 -C {temp_save_dir}")
@@ -199,8 +198,9 @@ if __name__ == "__main__":
                                                                            args.image_dir, 
                                                                            args.metadata_dir, 
                                                                            args.repo_id)
+    print(all_image_subdirs)
     # download all images in jpg format 
-    jpg_paths_by_source = download_image_files_as_jpg(all_image_subdirs, 
+    jpg_paths_by_source = download_image_files_as_jpg([all_image_subdirs[1][1:]], 
                                                       args.repo_id, 
                                                       args.local_dataset_path)
     # generate all image annotations
