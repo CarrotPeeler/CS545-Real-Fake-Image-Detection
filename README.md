@@ -14,7 +14,7 @@ cd CS545-Real-Fake-Image-Detection
 ```
 Run the following script to download, compress, and generate the subset of fake images and metadata used from Sentry.
 
-Note: for each dataset in sentry, the respective tar files are downloaded together, extracted, and then deleted to save space. Meaning, you will at most need ~100 GBs to handle the intermediate downloading process. The final compressed subset is only ~24 GBs. 
+Note: for each dataset in sentry, the respective tar files are downloaded together, extracted, and then deleted to save space. Meaning, you will at most need ~100 GBs to handle the intermediate downloading process. The final compressed subset is only ~18 GBs. 
 ```bash
 python3 datagen/make_sentry_subset.py < /dev/null > log.txt 2>&1 &
 ```
