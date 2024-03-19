@@ -90,7 +90,7 @@ def batch_convert_png_jpg(png_paths):
     jpg_paths = list(map(lambda x: f"{x.rpartition('.')[0]}.jpg", jpg_paths))
     with open(temp_dir + "/ffmpeg_commands.sh", 'a+') as f:
         for i in range(len(png_paths)):
-            f.writelines(f"ffmpeg -loglevel quiet -i {png_paths[i]} {jpg_paths[i]}\n")
+            f.writelines(f"ffmpeg -loglevel quiet -i {png_paths[i]} -vf scale=256:256 {jpg_paths[i]}\n")
     
     # parallelize ffmpeg commands
     os.system(f"parallel --eta < {temp_dir}/ffmpeg_commands.sh")
@@ -199,6 +199,7 @@ if __name__ == "__main__":
                                                                            args.image_dir, 
                                                                            args.metadata_dir, 
                                                                            args.repo_id)
+    # print(all_image_subdirs)
     # download all images in jpg format 
     jpg_paths_by_source = download_image_files_as_jpg(all_image_subdirs, 
                                                       args.repo_id, 
