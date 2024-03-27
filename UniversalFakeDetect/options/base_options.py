@@ -58,6 +58,39 @@ class BaseOptions():
             type=str,
             help="backend to use for distributed processing"
         )
+        parser.add_argument(
+        "--use_active_learning",
+        action='store_true',
+        help="enable or disable Active Learning",
+        )
+        parser.add_argument(
+        "--num_samples_per_class",
+        type=int,
+        default=5000,
+        help="how many datapoints to sample from each class to generate initial train set for Active Learning",
+        )
+        parser.add_argument(
+        "--dropout_iter",
+        type=int,
+        default=100,
+        metavar="T",
+        help="dropout iterations,T (default: 100) for Active Learning",
+        )
+        parser.add_argument(
+            "--query",
+            type=int,
+            default=1000,
+            metavar="Q",
+            help="number of queries for Active Learning",
+        )
+        parser.add_argument(
+            "--acq_func",
+            type=int,
+            default=1,
+            metavar="AF",
+            help="acqusition functions for Active Learning:\
+            0-all, 1-uniform, 2-max_entropy, 3-bald, 4-var_ratios, 5-mean_std (default: 0)",
+        )
         parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment. It decides where to store samples and models')
         parser.add_argument('--num_threads', default=4, type=int, help='# threads for loading data')
         parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')

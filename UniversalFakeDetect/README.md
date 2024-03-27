@@ -60,12 +60,12 @@ datasets
  
 - You can evaluate the model on all the dataset at once by running:
 ```bash
-python3 validate.py --arch=CLIP:ViT-L/14 --ckpt=pretrained_weights/fc_weights.pth --result_folder=results/clip_vitl14 --gpu_id=0
+python3 UniversalFakeDetect/validate.py --arch=CLIP:ViT-L/14 --ckpt=pretrained_weights/fc_weights.pth --result_folder=results/clip_vitl14 --gpu_id=0
 ```
 
 - You can also evaluate the model on one generative model by specifying the paths of real and fake datasets
 ```bash
-python validate.py  --arch=CLIP:ViT-L/14   --ckpt=pretrained_weights/fc_weights.pth   --result_folder=clip_vitl14  --real_path datasets/test/progan/0_real --fake_path datasets/test/progan/1_fake 
+python UniversalFakeDetect/validate.py  --arch=CLIP:ViT-L/14   --ckpt=pretrained_weights/fc_weights.pth   --result_folder=clip_vitl14  --real_path datasets/test/progan/0_real --fake_path datasets/test/progan/1_fake 
 ```
 
 Note that if no arguments are provided for `real_path` and `fake_path`, the script will perform the evaluation on all the domains specified in `dataset_paths.py`.
@@ -90,11 +90,11 @@ datasets
 - A total of 20 different object categories, with each folder containing the corresponding real and fake images in `0_real` and `1_fake` folders.
 - The model can then be trained with the following command:
 ```bash
-python3 train.py --name=clip_vitl14 --wang2020_data_path=/home/vislab-001/Jared/dip/CS545-Real-Fake-Image-Detection/sentry-dataset/ --data_mode=dip  --arch=CLIP:ViT-L/14  --fix_backbone --save_epoch_freq=5 --gpu_ids=0,1 --num_threads=4 --batch_size=512 
+python3 UniversalFakeDetect/train.py --name=clip_vitl14 --wang2020_data_path=/home/vislab-001/Jared/dip/CS545-Real-Fake-Image-Detection/sentry-dataset/ --data_mode=dip  --arch=CLIP:ViT-L/14  --fix_backbone --save_epoch_freq=5 --gpu_ids=0,1 --num_threads=4 --batch_size=512 
 ```
 - Fine-tuning with pretrained weights
 ```bash
-python3 train.py --name=clip_vitl14 --wang2020_data_path=/home/vislab-001/Jared/dip/CS545-Real-Fake-Image-Detection/sentry-dataset/ --data_mode=dip  --arch=CLIP:ViT-L/14  --fix_backbone --save_epoch_freq=5 --gpu_ids=0,1 --num_threads=4 --batch_size=512 --ckpt=./pretrained_weights/fc_weights.pth
+python3 UniversalFakeDetect/train.py --name=clip_vitl14 --wang2020_data_path=/home/vislab-001/Jared/dip/CS545-Real-Fake-Image-Detection/sentry-dataset/ --data_mode=dip  --arch=CLIP:ViT-L/14  --fix_backbone --save_epoch_freq=5 --gpu_ids=0,1 --num_threads=4 --batch_size=512 --ckpt=./pretrained_weights/fc_weights.pth
 ```
 - **Important**: do not forget to use the `--fix_backbone` argument during training, which makes sure that the only the linear layer's parameters will be trained.
 

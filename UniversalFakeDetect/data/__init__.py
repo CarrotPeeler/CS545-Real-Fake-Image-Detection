@@ -21,9 +21,9 @@ def get_bal_sampler(dataset):
     return sampler
 
 
-def create_dataloader(opt, preprocess=None):
+def create_dataloader(opt, preprocess=None, premade_dataset=None):
     shuffle = not opt.serial_batches if (opt.isTrain and not opt.class_bal) else False
-    dataset = RealFakeDataset(opt)
+    dataset = RealFakeDataset(opt) if premade_dataset is None else premade_dataset
     batch_size = int(opt.batch_size / max(1, len(opt.gpu_ids)))
     if '2b' in opt.arch:
         dataset.transform = preprocess

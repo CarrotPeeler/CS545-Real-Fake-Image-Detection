@@ -1,5 +1,10 @@
 tqdm
-huggingface_hub
+huggingface_hub>=0.21.4
 glob2
-img2dataset
-kaggle
+img2dataset>=1.45.0
+kaggle>=1.5.16
+torch>=1.13.1+cu117
+modAL-python==0.4.2.1
+scipy
+scikit-learn
+skorch==0.9.0

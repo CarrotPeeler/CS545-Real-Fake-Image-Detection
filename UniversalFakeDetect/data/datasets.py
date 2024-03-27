@@ -54,7 +54,7 @@ def get_list(path, must_contain=''):
 
 
 class RealFakeDataset(Dataset):
-    def __init__(self, opt):
+    def __init__(self, opt, al_mode=None, init_idxs=None):
         rand.seed(opt.seed)
         assert opt.data_label in ["train", "val"]
         #assert opt.data_mode in ["ours", "wang2020", "ours_wang2020"]
@@ -125,6 +125,20 @@ class RealFakeDataset(Dataset):
             shuffle(fake_list)
             real_list = real_list[0:opt.max_sample]
             fake_list = fake_list[0:opt.max_sample]
+
+        if opt.use_active_learning and al_mode is not None:
+            real_list, fake_list = np.ma.array(real_list), np.ma.array(fake_list)
+
+            if al_mode == "init":
+                real_list, fake_list = real_list[init_idxs], fake_list[init_idxs] 
+            elif al_mode == "pool":
+                real_list[init_idxs] = np.ma.masked
+                real_list = real_list[real_list.mask == False]
+                
+                fake_list[init_idxs] = np.ma.masked
+                fake_list = fake_list[fake_list.mask == False]
+            real_list, fake_list = real_list.tolist(), fake_list.tolist()
+
 
         # setting the labels for the dataset
         self.labels_dict = {}
