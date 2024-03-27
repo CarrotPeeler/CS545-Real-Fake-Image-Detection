@@ -1,0 +1,4 @@
+torch
+modAL-python
+scipy
+scikit-learn
