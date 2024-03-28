@@ -18,9 +18,10 @@ def active_learning_procedure(
     X_init: np.ndarray,
     y_init: np.ndarray,
     estimator,
+    opt,
     T: int = 100,
     n_query: int = 10,
-    training: bool = True,
+    training: bool = True
 ):
     """Active Learning Procedure
 
@@ -44,7 +45,7 @@ def active_learning_procedure(
     perf_hist = [learner.score(X_test, y_test)]
     for index in range(T):
         query_idx, query_instance = learner.query(
-            X_pool, n_query=n_query, T=T, training=training
+            X_pool, opt=opt, n_query=n_query, T=T, training=training
         )
         learner.teach(X_pool[query_idx], y_pool[query_idx])
         X_pool = np.delete(X_pool, query_idx, axis=0)

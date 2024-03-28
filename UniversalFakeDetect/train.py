@@ -14,20 +14,25 @@ from tqdm.auto import tqdm
 import torch
 import distributed as du
 import numpy as np
-from skorch import NeuralNetClassifier
+from skorch import NeuralNetBinaryClassifier
 from active_learning.active_learning_net import active_learning_procedure, select_acq_function 
 from util import set_seed
 
 
 def load_al_model(model, opt):
     """Scikit-Learn wrapper for PyTorch models"""
-    estimator = NeuralNetClassifier(
+    if opt.optim == 'adam':
+        optimizer = torch.optim.AdamW
+    elif opt.optim == 'sgd':
+        optimizer = torch.optim.SGD
+
+    estimator = NeuralNetBinaryClassifier(
         module=model.model,
         lr=opt.lr,
         batch_size=opt.batch_size,
         max_epochs=opt.niter,
-        criterion=model.loss_fn,
-        optimizer=model.optimizer,
+        criterion=torch.nn.BCEWithLogitsLoss,
+        optimizer=optimizer,
         train_split=None,
         verbose=0,
         device=model.device,
@@ -169,32 +174,39 @@ def train_active_learning(opt, val_opt):
     # create init_train, val, and pool datasets
 
     # fake/real train samples are both ~240k, sample random indices for init
-    init_idxs = np.random.choice(240000, opt.num_samples_per_class) 
+    init_idxs = np.random.choice(240000, 1500)#opt.num_samples_per_class) 
     init_loader = create_dataloader(opt, premade_dataset=RealFakeDataset(opt, "init", init_idxs))
-    pool_loader = create_dataloader(opt, premade_dataset=RealFakeDataset(opt, "pool", init_idxs))
-    val_loader = create_dataloader(val_opt)
-    test_loaders, test_metadata = create_test_loaders(opt)
+    # pool_loader = create_dataloader(opt, premade_dataset=RealFakeDataset(opt, "pool", init_idxs))
+    # val_loader = create_dataloader(val_opt)
+    # test_loaders, test_metadata = create_test_loaders(opt)
 
-    print(f"NUM INIT SAMPLES: {len(init_loader.dataset)}\
-          \nNUM POOL SAMPLES: {len(pool_loader.dataset)}\
-          \nNUM VAL SAMPLES: {len(val_loader.dataset)}\
-          \nNUM TEST SETS: {test_metadata[0]} | NUM TEST SAMPLES: {test_metadata[1]}")
+    # print(f"NUM INIT SAMPLES: {len(init_loader.dataset)}\
+    #       \nNUM POOL SAMPLES: {len(pool_loader.dataset)}\
+    #       \nNUM VAL SAMPLES: {len(val_loader.dataset)}\
+    #       \nNUM TEST SETS: {test_metadata[0]} | NUM TEST SAMPLES: {test_metadata[1]}")
+    
+    
+    estimator.initialize()
+    from active_learning.acquisition_functions import mean_std
+    from modAL.models import ActiveLearner
 
+    learner = ActiveLearner(
+        estimator=estimator,
+        query_strategy=mean_std,
+    )
+    s_t = time.time()
+    # outputs, subset_idxs = shannon_entropy_function(learner, init_loader, opt, T=2)
 
-    # # Wrap train/val dataloaders for Active Learning
-    # datasets = dict()
-    # dataloader = LoadData(train_loader, 
-    #                       val_loader, 
-    #                       num_samples_per_class=opt.num_samples_per_class)
-    # (
-    #     datasets["X_init"],
-    #     datasets["y_init"],
-    #     datasets["X_val"],
-    #     datasets["y_val"],
-    #     datasets["X_pool"],
-    #     datasets["y_pool"]
-    # ) = dataloader.load_all()
-
+    # X,y = next(iter(init_loader))
+    # X2, y2 = next(iter(init_loader))
+    # X = torch.concatenate([X, X2])
+    # batch = torch.softmax(
+    #                         learner.estimator.forward(X, training=True, device=learner.estimator.device),
+    #                         dim=-1,
+    #                     )
+    outputs, random_subset = mean_std(learner, init_loader, opt, T=2)
+    e_t = time.time()
+    print(f"TIME TAKEN: {(e_t - s_t)}, SHAPE: {outputs.shape}")
     # acq_func = select_acq_function(opt.acq_func)
     # training_hist, test_score = active_learning_procedure(
     #                                 query_strategy=acq_func,
