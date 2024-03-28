@@ -18,14 +18,8 @@ from copy import deepcopy
 from dataset_paths import DATASET_PATHS
 import random
 import shutil
+from util import set_seed
 from scipy.ndimage.filters import gaussian_filter
-
-SEED = 0
-def set_seed():
-    torch.manual_seed(SEED)
-    torch.cuda.manual_seed(SEED)
-    np.random.seed(SEED)
-    random.seed(SEED)
 
 
 MEAN = {
@@ -157,8 +151,6 @@ def get_list(path, must_contain=''):
 
 
 
-
-
 class RealFakeDataset(Dataset):
     def __init__(self,  real_path, 
                         fake_path, 
@@ -284,6 +276,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--result_folder', type=str, default='result', help='')
     parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--seed', type=int, default=0, help="Random seed")
 
     parser.add_argument('--jpeg_quality', type=int, default=None, help="100, 90, 80, ... 30. Used to test robustness of our model. Not apply if None")
     parser.add_argument('--gaussian_sigma', type=int, default=None, help="0,1,2,3,4.     Used to test robustness of our model. Not apply if None")
@@ -315,7 +308,7 @@ if __name__ == '__main__':
 
 
     for dataset_path in (dataset_paths):
-        set_seed()
+        set_seed(opt.seed)
 
         dataset = RealFakeDataset(  dataset_path['real_path'], 
                                     dataset_path['fake_path'], 

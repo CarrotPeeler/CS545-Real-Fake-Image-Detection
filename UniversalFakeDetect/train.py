@@ -3,7 +3,8 @@ import time
 import numpy as np
 from tensorboardX import SummaryWriter
 
-from validate import validate
+from validate import validate, RealFakeDataset as RealFakeDataset_Test
+from dataset_paths import DATASET_PATHS
 from data import create_dataloader, shuffle_dataset
 from data.datasets import RealFakeDataset
 from earlystop import EarlyStopping
@@ -15,6 +16,7 @@ import distributed as du
 import numpy as np
 from skorch import NeuralNetClassifier
 from active_learning.active_learning_net import active_learning_procedure, select_acq_function 
+from util import set_seed
 
 
 def load_al_model(model, opt):
@@ -31,6 +33,38 @@ def load_al_model(model, opt):
         device=model.device,
     )
     return estimator
+
+
+def create_test_loaders(opt):
+    """
+    Create a dataloader for each dataset in the test set
+
+    returns:
+        dict of test loaders by dataset key
+        tuple of metadata for total test set (number of datasets and volume of images)
+    """
+    dataset_paths = DATASET_PATHS
+    test_loaders = {}
+    num_datasets = 0
+    num_images = 0
+
+    for dataset_path in (dataset_paths):
+        dataset = RealFakeDataset_Test(dataset_path['real_path'], 
+                                        dataset_path['fake_path'], 
+                                        dataset_path['data_mode'], 
+                                        arch=opt.arch,
+                                        max_sample=None, 
+                                        jpeg_quality=None, 
+                                        gaussian_sigma=None,
+                                    )
+        loader = torch.utils.data.DataLoader(dataset, 
+                                             batch_size=opt.batch_size, 
+                                             shuffle=False, 
+                                             num_workers=opt.num_threads)
+        test_loaders[dataset_path['key']] = loader
+        num_datasets += 1
+        num_images += len(dataset)
+    return test_loaders, (num_datasets, num_images)
 
 
 """Currently assumes jpg_prob, blur_prob 0 or 1"""
@@ -55,12 +89,10 @@ def get_val_opt():
 
 
 def train(model, opt, val_opt):
+    set_seed(opt.seed)
+
     if len(opt.gpu_ids) > 1:
         du.init_distributed_training(len(opt.gpu_ids), opt.shard_id)
-    
-    # Set random seed from configs.
-    np.random.seed(opt.seed)
-    torch.manual_seed(opt.seed)
 
     model = Trainer(opt)
     
@@ -129,9 +161,7 @@ def train(model, opt, val_opt):
 
 
 def train_active_learning(opt, val_opt):
-    # Set random seed from configs.
-    np.random.seed(opt.seed)
-    torch.manual_seed(opt.seed)
+    set_seed(opt.seed)
 
     model = Trainer(opt) # load trainer
     estimator = load_al_model(model, opt) # wrap trainer 
@@ -143,10 +173,12 @@ def train_active_learning(opt, val_opt):
     init_loader = create_dataloader(opt, premade_dataset=RealFakeDataset(opt, "init", init_idxs))
     pool_loader = create_dataloader(opt, premade_dataset=RealFakeDataset(opt, "pool", init_idxs))
     val_loader = create_dataloader(val_opt)
+    test_loaders, test_metadata = create_test_loaders(opt)
 
     print(f"NUM INIT SAMPLES: {len(init_loader.dataset)}\
           \nNUM POOL SAMPLES: {len(pool_loader.dataset)}\
-          \nNUM VAL SAMPLES: {len(val_loader.dataset)}")
+          \nNUM VAL SAMPLES: {len(val_loader.dataset)}\
+          \nNUM TEST SETS: {test_metadata[0]} | NUM TEST SAMPLES: {test_metadata[1]}")
 
 
     # # Wrap train/val dataloaders for Active Learning
