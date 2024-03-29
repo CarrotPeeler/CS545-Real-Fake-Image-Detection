@@ -28,6 +28,8 @@ Run the following script to download all real data components:
 python3 datagen/cc3m/add_real_data.py < /dev/null > log.txt 2>&1 &
 ```
 
+After downloading the data, there should be 481,222 train images and 187,164 validation images. 
+
 ## Training the Models
 
 
