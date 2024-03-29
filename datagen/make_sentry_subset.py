@@ -39,6 +39,8 @@ def filter_imagedata_subset(files, train_reduce_factor, val_reduce_factor):
 
     if "MetaData" in files[0] or len(files) == 1: # if metadata or only 1 file, return as is
         return files
+    elif "ImageData/train/stylegan3-80K" in files[0]:
+        return files
     elif "ImageData/train" in files[0]:
         files_subset = files[0:train_end_idx]
     elif "ImageData/val" in files[0]:
@@ -100,7 +102,7 @@ def batch_convert_png_jpg(png_paths):
 def download_image_files_as_jpg(all_subdirs,
                                 repo_id, 
                                 local_dataset_dir, 
-                                train_reduce_factor=.125, 
+                                train_reduce_factor=.075, 
                                 val_reduce_factor=.5):
     jpg_paths_by_source = {}
 
@@ -199,9 +201,9 @@ if __name__ == "__main__":
                                                                            args.image_dir, 
                                                                            args.metadata_dir, 
                                                                            args.repo_id)
-    # print(all_image_subdirs)
+    print([all_image_subdirs[0]])
     # download all images in jpg format 
-    jpg_paths_by_source = download_image_files_as_jpg(all_image_subdirs, 
+    jpg_paths_by_source = download_image_files_as_jpg([all_image_subdirs[0]], 
                                                       args.repo_id, 
                                                       args.local_dataset_path)
     # generate all image annotations
