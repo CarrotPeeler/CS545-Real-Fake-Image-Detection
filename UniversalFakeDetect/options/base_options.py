@@ -72,7 +72,7 @@ class BaseOptions():
         parser.add_argument(
         "--dropout_iter",
         type=int,
-        default=100,
+        default=20,
         metavar="T",
         help="dropout iterations,T (default: 100) for Active Learning",
         )
@@ -86,7 +86,7 @@ class BaseOptions():
         parser.add_argument(
             "--acq_func",
             type=int,
-            default=1,
+            default=2,
             metavar="AF",
             help="acqusition functions for Active Learning:\
             0-all, 1-uniform, 2-max_entropy, 3-bald, 4-var_ratios, 5-mean_std (default: 0)",

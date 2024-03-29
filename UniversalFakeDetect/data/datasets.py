@@ -183,6 +183,13 @@ class RealFakeDataset(Dataset):
             self.transform = None # will be initialized in trainer.py
 
 
+    def remove_samples(self, idxs):
+        """
+        Remove samples given a sequence of indices
+        """
+        self.total_list = np.delete(self.total_list, idxs, axis=0)
+
+
     def __len__(self):
         return len(self.total_list)
 

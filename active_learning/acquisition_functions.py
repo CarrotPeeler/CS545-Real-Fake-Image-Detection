@@ -5,11 +5,11 @@ import torch
 import numpy as np
 from scipy import stats
 from tqdm.auto import tqdm
-from torch.utils.data import DataLoader, Subset
-from UniversalFakeDetect.data import create_dataloader
+from torch.utils.data import Dataset, Subset
+from skorch.helper import SliceDataset
 
 def predictions_from_pool(
-    model, X_pool: DataLoader, opt, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, T: int = 100, training: bool = True
 ):
     """Run random_subset prediction on model and return the output
 
@@ -18,33 +18,26 @@ def predictions_from_pool(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    random_subset = np.random.choice(range(len(X_pool.dataset)), size=2000, replace=False)
-    subset_loader = create_dataloader(opt, premade_dataset=Subset(X_pool.dataset, random_subset))
-    device = model.estimator.device
+    random_subset = np.random.choice(range(len(X_pool)), size=2000, replace=False)
+    X_pool = SliceDataset(X_pool, idx=0)
 
     with torch.no_grad():
-        outputs = []
-
-        # num of MC Dropout iters
-        for _ in tqdm(range(T)):
-            all_batches = torch.tensor([]).to(device)
-
-            # run batch forward
-            for X,y in subset_loader:
-                batch = torch.softmax(
-                            model.estimator.forward(X, training=True, device=device),
-                            dim=-1,
-                        )
-                all_batches = torch.cat([all_batches, batch])
-
-            outputs.append(all_batches)
-
-        outputs = torch.stack(outputs)
+        outputs = np.stack(
+            [
+                torch.softmax(
+                    model.estimator.forward(X_pool[random_subset], training=training),
+                    dim=-1,
+                )
+                .cpu()
+                .numpy()
+                for _ in range(T)
+            ]
+        )
     return outputs, random_subset
 
 
 def uniform(
-    model, X_pool: DataLoader, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Baseline acquisition a(x) = unif() with unif() a function
     returning a draw from a uniform distribution over the interval [0,1].
@@ -56,13 +49,13 @@ def uniform(
         n_query: Number of points that randomly select from pool set,
         training: If False, run test without MC dropout. (default=True)
     """
-    query_idx = np.random.choice(range(len(X_pool.dataset)), size=n_query, replace=False)
-    subset_loader = create_dataloader(opt, premade_dataset=Subset(X_pool.dataset, query_idx))
-    return query_idx, subset_loader
+    query_idx = np.random.choice(range(len(X_pool)), size=n_query, replace=False)
+    subset = Subset(X_pool, query_idx)
+    return query_idx, subset
 
 
 def shannon_entropy_function(
-    model, X_pool: DataLoader, opt, T: int = 100, E_H: bool = False, training: bool = True
+    model, X_pool: Dataset, opt, T: int = 100, E_H: bool = False, training: bool = True
 ):
     """H[y|x,D_train] := - sum_{c} p(y=c|x,D_train)log p(y=c|x,D_train)
 
@@ -74,19 +67,19 @@ def shannon_entropy_function(
         training: If False, run test without MC dropout. (default=True)
     """
     outputs, random_subset = predictions_from_pool(model, X_pool, opt, T, training=training)
-    pc = outputs.mean(dim=0)
+    pc = outputs.mean(axis=0)
     # Binary Shannon Entropy
-    H = (-pc * torch.log(pc + 1e-10) - (1 - pc) * torch.log(1 - pc + 1e-10)) # To avoid division with zero, add 1e-10
+    H = (-pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)) # To avoid division with zero, add 1e-10
     if E_H:
         # Binary Model Entropy 
-        E = -torch.mean(outputs * torch.log(outputs + 1e-10) + 
-                       (1 - outputs) * torch.log(1 - outputs + 1e-10), dim=0)
+        E = -np.mean(outputs * np.log(outputs + 1e-10) + 
+                       (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0)
         return H, E, random_subset
     return H, random_subset
 
 
 def max_entropy(
-    model, X_pool: DataLoader, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Choose pool points that maximise the predictive entropy.
     Using Shannon entropy function.
@@ -101,14 +94,14 @@ def max_entropy(
     acquisition, random_subset = shannon_entropy_function(
         model, X_pool, opt, T, training=training
     )
-    idx = (-acquisition).argsort()[:n_query].detach().cpu().numpy() # retrieve n highest entropy sample idxs
+    idx = (-acquisition).argsort()[:n_query] # retrieve n highest entropy sample idxs
     query_idx = random_subset[idx] # fetch pool idxs that correspond to the n sample idxs from the random subset
-    subset_loader = create_dataloader(opt, premade_dataset=Subset(X_pool.dataset, query_idx))
-    return query_idx, subset_loader
+    subset = Subset(X_pool, query_idx)
+    return query_idx, subset
 
 
 def bald(
-    model, X_pool: DataLoader, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Choose pool points that are expected to maximise the information
     gained about the model parameters, i.e. maximise the mutal information
@@ -131,14 +124,14 @@ def bald(
         model, X_pool, opt, T, E_H=True, training=training
     )
     acquisition = H - E_H
-    idx = (-acquisition).argsort()[:n_query].detach().cpu().numpy()
+    idx = (-acquisition).argsort()[:n_query]
     query_idx = random_subset[idx]
-    subset_loader = create_dataloader(opt, premade_dataset=Subset(X_pool.dataset, query_idx))
-    return query_idx, subset_loader
+    subset = Subset(X_pool, query_idx)
+    return query_idx, subset
 
 
 def var_ratios(
-    model, X_pool: DataLoader, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Like Max Entropy but Variational Ratios measures lack of confidence.
     Given: variational_ratio[x] := 1 - max_{y} p(y|x,D_{train})
@@ -152,17 +145,17 @@ def var_ratios(
     """
     outputs, random_subset = predictions_from_pool(model, X_pool, opt, T, training)
     # get binary preds
-    preds = (outputs.detach().cpu().numpy()[:, :] > model.estimator.threshold).astype('uint8')
+    preds = (outputs[:, :] > model.estimator.threshold).astype('uint8')
     _, count = stats.mode(preds, axis=0, keepdims=False)
     acquisition = (1 - count / T).reshape((-1,))
     idx = (-acquisition).argsort()[:n_query]
     query_idx = random_subset[idx]
-    subset_loader = create_dataloader(opt, premade_dataset=Subset(X_pool.dataset, query_idx))
-    return query_idx, subset_loader
+    subset = Subset(X_pool, query_idx)
+    return query_idx, subset
 
 
 def mean_std(
-    model, X_pool: DataLoader, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Maximise mean standard deviation
     Given: sigma_c = sqrt(E_{q(w)}[p(y=c|x,w)^2]-E_{q(w)}[p(y=c|x,w)]^2)
@@ -175,7 +168,7 @@ def mean_std(
         training: If False, run test without MC dropout. (default=True)
     """
     outputs, random_subset = predictions_from_pool(model, X_pool, opt, T, training)
-    outputs_pos = outputs.detach().cpu().numpy()
+    outputs_pos = outputs
     outputs_neg = 1 - outputs_pos
 
     # create separate pos and neg class probs in last dim
@@ -185,5 +178,5 @@ def mean_std(
     acquisition = np.mean(sigma_c, axis=-1)
     idx = (-acquisition).argsort()[:n_query]
     query_idx = random_subset[idx]
-    subset_loader = create_dataloader(opt, premade_dataset=Subset(X_pool.dataset, query_idx))
-    return query_idx, subset_loader
+    subset = Subset(X_pool, query_idx)
+    return query_idx, subset

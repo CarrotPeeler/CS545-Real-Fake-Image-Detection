@@ -15,8 +15,9 @@ import torch
 import distributed as du
 import numpy as np
 from skorch import NeuralNetBinaryClassifier
-from active_learning.active_learning_net import active_learning_procedure, select_acq_function 
+from active_learning.active_learning_net import active_learning_procedure, select_acq_function, SliceActiveLearner
 from util import set_seed
+from skorch.helper import SliceDataset
 
 
 def load_al_model(model, opt):
@@ -34,22 +35,22 @@ def load_al_model(model, opt):
         criterion=torch.nn.BCEWithLogitsLoss,
         optimizer=optimizer,
         train_split=None,
-        verbose=0,
+        verbose=1,
         device=model.device,
     )
     return estimator
 
 
-def create_test_loaders(opt):
+def create_test_datasets(opt):
     """
-    Create a dataloader for each dataset in the test set
+    Create a DataSet Object for each dataset in the test set
 
     returns:
         dict of test loaders by dataset key
         tuple of metadata for total test set (number of datasets and volume of images)
     """
     dataset_paths = DATASET_PATHS
-    test_loaders = {}
+    test_datasets = {}
     num_datasets = 0
     num_images = 0
 
@@ -62,14 +63,10 @@ def create_test_loaders(opt):
                                         jpeg_quality=None, 
                                         gaussian_sigma=None,
                                     )
-        loader = torch.utils.data.DataLoader(dataset, 
-                                             batch_size=opt.batch_size, 
-                                             shuffle=False, 
-                                             num_workers=opt.num_threads)
-        test_loaders[dataset_path['key']] = loader
+        test_datasets[dataset_path['key']] = dataset
         num_datasets += 1
         num_images += len(dataset)
-    return test_loaders, (num_datasets, num_images)
+    return test_datasets, (num_datasets, num_images)
 
 
 """Currently assumes jpg_prob, blur_prob 0 or 1"""
@@ -175,38 +172,25 @@ def train_active_learning(opt, val_opt):
 
     # fake/real train samples are both ~240k, sample random indices for init
     init_idxs = np.random.choice(240000, 1500)#opt.num_samples_per_class) 
-    init_loader = create_dataloader(opt, premade_dataset=RealFakeDataset(opt, "init", init_idxs))
-    # pool_loader = create_dataloader(opt, premade_dataset=RealFakeDataset(opt, "pool", init_idxs))
-    # val_loader = create_dataloader(val_opt)
-    # test_loaders, test_metadata = create_test_loaders(opt)
+    init_dataset = RealFakeDataset(opt, "init", init_idxs)
+    # pool_dataset = RealFakeDataset(opt, "pool", init_idxs)
+    # val_dataset = RealFakeDataset(val_opt)
+    # test_dict, test_metadata = create_test_datasets(opt)
 
-    # print(f"NUM INIT SAMPLES: {len(init_loader.dataset)}\
-    #       \nNUM POOL SAMPLES: {len(pool_loader.dataset)}\
-    #       \nNUM VAL SAMPLES: {len(val_loader.dataset)}\
+    # print(f"NUM INIT SAMPLES: {len(init_dataset)}\
+    #       \nNUM POOL SAMPLES: {len(pool_dataset)}\
+    #       \nNUM VAL SAMPLES: {len(val_dataset)}\
     #       \nNUM TEST SETS: {test_metadata[0]} | NUM TEST SAMPLES: {test_metadata[1]}")
-    
-    
+    from active_learning.acquisition_functions import max_entropy
     estimator.initialize()
-    from active_learning.acquisition_functions import mean_std
-    from modAL.models import ActiveLearner
-
-    learner = ActiveLearner(
+    learner = SliceActiveLearner(
         estimator=estimator,
-        query_strategy=mean_std,
+        training=init_dataset,
+        query_strategy=max_entropy,
     )
-    s_t = time.time()
-    # outputs, subset_idxs = shannon_entropy_function(learner, init_loader, opt, T=2)
-
-    # X,y = next(iter(init_loader))
-    # X2, y2 = next(iter(init_loader))
-    # X = torch.concatenate([X, X2])
-    # batch = torch.softmax(
-    #                         learner.estimator.forward(X, training=True, device=learner.estimator.device),
-    #                         dim=-1,
-    #                     )
-    outputs, random_subset = mean_std(learner, init_loader, opt, T=2)
-    e_t = time.time()
-    print(f"TIME TAKEN: {(e_t - s_t)}, SHAPE: {outputs.shape}")
+    # idx, subset = max_entropy(estimator, init_dataset, opt, T=2)
+    # print(len(subset))
+    
     # acq_func = select_acq_function(opt.acq_func)
     # training_hist, test_score = active_learning_procedure(
     #                                 query_strategy=acq_func,
