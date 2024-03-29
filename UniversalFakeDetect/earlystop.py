@@ -40,5 +40,5 @@ class EarlyStopping:
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             print(f'Validation accuracy increased ({self.score_max:.6f} --> {score:.6f}).  Saving model ...')
-        model.save_networks('best')
+        # model.save_networks('best')
         self.score_max = score

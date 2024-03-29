@@ -1,5 +1,5 @@
 ----------------- Options ---------------
-                 acq_func: 1                             
+                 acq_func: 2                             
                      arch: CLIP:RN50                     	[default: res50]
                batch_size: 256                           
                     beta1: 0.9                           
@@ -13,7 +13,7 @@
                data_label: train                         
                 data_mode: dip                           	[default: ours]
              dist_backend: nccl                          
-             dropout_iter: 100                           
+             dropout_iter: 20                            
           earlystop_epoch: 5                             
               epoch_count: 1                             
            fake_list_path: None                          

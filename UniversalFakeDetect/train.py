@@ -165,6 +165,8 @@ def train(model, opt, val_opt):
 def train_active_learning(opt, val_opt):
     set_seed(opt.seed)
 
+    os.makedirs(os.path.join(opt.checkpoints_dir, opt.name), exist_ok=True)
+
     model = Trainer(opt) # load trainer
     estimator = load_al_model(model, opt) # wrap trainer 
 
@@ -173,38 +175,28 @@ def train_active_learning(opt, val_opt):
     # fake/real train samples are both ~240k, sample random indices for init
     init_idxs = np.random.choice(240000, 1500)#opt.num_samples_per_class) 
     init_dataset = RealFakeDataset(opt, "init", init_idxs)
-    # pool_dataset = RealFakeDataset(opt, "pool", init_idxs)
-    # val_dataset = RealFakeDataset(val_opt)
-    # test_dict, test_metadata = create_test_datasets(opt)
+    pool_dataset = RealFakeDataset(opt, "pool", init_idxs)
+    val_dataset = RealFakeDataset(val_opt)
+    test_dict, test_metadata = create_test_datasets(opt)
 
-    # print(f"NUM INIT SAMPLES: {len(init_dataset)}\
-    #       \nNUM POOL SAMPLES: {len(pool_dataset)}\
-    #       \nNUM VAL SAMPLES: {len(val_dataset)}\
-    #       \nNUM TEST SETS: {test_metadata[0]} | NUM TEST SAMPLES: {test_metadata[1]}")
-    from active_learning.acquisition_functions import max_entropy
-    estimator.initialize()
-    learner = SliceActiveLearner(
-        estimator=estimator,
-        training=init_dataset,
-        query_strategy=max_entropy,
-    )
-    # idx, subset = max_entropy(estimator, init_dataset, opt, T=2)
-    # print(len(subset))
+    print(f"NUM INIT SAMPLES: {len(init_dataset)}\
+          \nNUM POOL SAMPLES: {len(pool_dataset)}\
+          \nNUM VAL SAMPLES: {len(val_dataset)}\
+          \nNUM TEST SETS: {test_metadata[0]} | NUM TEST SAMPLES: {test_metadata[1]}")
     
-    # acq_func = select_acq_function(opt.acq_func)
-    # training_hist, test_score = active_learning_procedure(
-    #                                 query_strategy=acq_func,
-    #                                 X_val=datasets["X_val"],
-    #                                 y_val=datasets["y_val"],
-    #                                 X_pool=datasets["X_pool"],
-    #                                 y_pool=datasets["y_pool"],
-    #                                 X_init=datasets["X_init"],
-    #                                 y_init=datasets["y_init"],
-    #                                 estimator=estimator,
-    #                                 T=args.dropout_iter,
-    #                                 n_query=args.query,
-    #                                 training=state,
-    #                             )
+    acq_func = select_acq_function(opt.acq_func)
+    training_hist, test_score = active_learning_procedure(
+                                    opt=opt,
+                                    query_strategy=acq_func,
+                                    init_dataset=init_dataset,
+                                    pool_dataset=pool_dataset,
+                                    val_dataset=val_dataset,
+                                    test_datasets=test_dict,
+                                    estimator=estimator,
+                                    T=opt.dropout_iter,
+                                    n_query=opt.query,
+                                    training=opt.use_mc_dropout,
+                                )
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()

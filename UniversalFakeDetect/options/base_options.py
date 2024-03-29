@@ -64,6 +64,11 @@ class BaseOptions():
         help="enable or disable Active Learning",
         )
         parser.add_argument(
+        "--use_mc_dropout",
+        action='store_true',
+        help="enable or disable Monte Carlo Dropout for Active Learning",
+        )
+        parser.add_argument(
         "--num_samples_per_class",
         type=int,
         default=5000,
@@ -72,7 +77,7 @@ class BaseOptions():
         parser.add_argument(
         "--dropout_iter",
         type=int,
-        default=20,
+        default=10,
         metavar="T",
         help="dropout iterations,T (default: 100) for Active Learning",
         )

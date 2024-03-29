@@ -1,5 +1,5 @@
 # Source: https://github.com/lunayht/DBALwithImgData 
-
+import os
 import numpy as np
 from typing import Dict
 from sklearn.base import BaseEstimator
@@ -7,6 +7,7 @@ from torch.utils.data import ConcatDataset, Dataset
 from modAL.models.base import BaseLearner
 from typing import Any, Callable, List, Optional, Tuple, Dict
 from skorch.helper import SliceDataset
+from UniversalFakeDetect.earlystop import EarlyStopping
 from active_learning.acquisition_functions import uniform, max_entropy, bald, var_ratios, mean_std
 
 
@@ -155,7 +156,16 @@ class SliceActiveLearner(BaseLearner):
         return self.estimator.score(X, np.asarray(y).astype(np.float32), **score_kwargs)
 
 
+def adjust_learning_rate(estimator, min_lr=1e-6):
+    for param_group in estimator.optimizer_.param_groups:
+        param_group['lr'] /= 10.
+    if param_group['lr'] < min_lr:
+        return False
+    return True
+
+
 def active_learning_procedure(
+    opt,
     query_strategy,
     init_dataset: Dataset,
     pool_dataset: Dataset,
@@ -179,6 +189,7 @@ def active_learning_procedure(
         n_query: Number of points to query from X_pool
         training: If False, run test without MC Dropout (default: True)
     """
+    save_dir = os.path.join(opt.checkpoints_dir, opt.name)
     X_val, y_val = SliceDataset(val_dataset,idx=0), SliceDataset(val_dataset,idx=1)
 
     learner = SliceActiveLearner(
@@ -189,6 +200,7 @@ def active_learning_procedure(
 
     perf_hist = [learner.score(X_val, y_val)]
 
+    early_stopping = EarlyStopping(patience=opt.earlystop_epoch, delta=-0.001, verbose=True)
     for index in range(T):
         query_idx, query_instance = learner.query(
             pool_dataset, n_query=n_query, T=T, training=training
@@ -198,10 +210,23 @@ def active_learning_procedure(
         pool_dataset.remove_samples(query_idx)
         
         model_accuracy_val = learner.score(X_val, y_val)
-        if (index + 1) % 5 == 0:
-            print(f"Val Accuracy after query {index+1}: {model_accuracy_val:0.4f}")
-    
         perf_hist.append(model_accuracy_val)
+
+        if (index + 1) % 5 == 0:
+            print(f"Val Accuracy after dropout iter {index+1}: {model_accuracy_val:0.4f}")
+            
+            early_stopping(model_accuracy_val, learner.estimator.module_)
+            if early_stopping.early_stop:
+                cont_train = adjust_learning_rate(learner.estimator)
+                if cont_train:
+                    print("Learning rate dropped by 10, continue training...")
+                    early_stopping = EarlyStopping(patience=opt.earlystop_epoch, delta=-0.002, verbose=True)
+                else:
+                    print("Early stopping.")
+                    break
+
+    # save model weights
+    learner.estimator.save_params(f_params=f"{save_dir}/dropout_iter_{(index + 1)}.pkl")
 
     model_accuracy_test = {}
     for k,dt in test_datasets.items():
