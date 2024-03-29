@@ -30,6 +30,12 @@ python3 datagen/cc3m/add_real_data.py < /dev/null > log.txt 2>&1 &
 
 After downloading the data, there should be 481,222 train images and 187,164 validation images. 
 
+## Active Learning
+We leverage Active Learning in an attempt to improve/maintain model performance while reducing the overall size of the training data.
+
+An example of how to use the Active Learning code is located in [UniversalFakeDetect/train.py](https://github.com/CarrotPeeler/CS545-Real-Fake-Image-Detection/blob/main/UniversalFakeDetect/train.py).
+
+
 ## Training the Models
 
 
