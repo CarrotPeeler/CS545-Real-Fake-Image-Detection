@@ -212,7 +212,7 @@ def active_learning_procedure(
         model_accuracy_val = learner.score(X_val, y_val)
         perf_hist.append(model_accuracy_val)
 
-        if (index + 1) % 5 == 0:
+        if (index + 1) % opt.val_freq == 0:
             print(f"Val Accuracy after dropout iter {index+1}: {model_accuracy_val:0.4f}")
             
             early_stopping(model_accuracy_val, learner.estimator.module_)

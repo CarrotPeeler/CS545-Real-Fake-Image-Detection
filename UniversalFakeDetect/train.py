@@ -139,6 +139,7 @@ def train(model, opt, val_opt):
             model.save_networks( 'model_epoch_best.pth' )
             model.save_networks( 'model_epoch_%s.pth' % epoch )
 
+        if epoch % opt.val_freq == 0:
             # Validation
             model.eval()
             ap, r_acc, f_acc, acc = validate(model.model, val_loader, gpu_id=model.device)
@@ -197,6 +198,7 @@ def train_active_learning(opt, val_opt):
                                     n_query=opt.query,
                                     training=opt.use_mc_dropout,
                                 )
+
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()
