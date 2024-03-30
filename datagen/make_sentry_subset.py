@@ -211,7 +211,7 @@ if __name__ == "__main__":
                                                                            args.repo_id)
     # print([all_image_subdirs[0]])
     # download all images in jpg format 
-    jpg_paths_by_source = download_image_files_as_jpg([[all_image_subdirs[0][0]]], 
+    jpg_paths_by_source = download_image_files_as_jpg(all_image_subdirs, 
                                                       args.repo_id, 
                                                       args.local_dataset_path)
     # generate all image annotations
