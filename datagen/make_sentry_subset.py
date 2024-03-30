@@ -34,16 +34,24 @@ def filter_imagedata_subset(files, train_reduce_factor, val_reduce_factor):
         files: list of tar files for one image data source
     """
     files_subset = []
-    train_end_idx = max(int(train_reduce_factor*len(files)), 1)
-    val_end_idx = max(int(val_reduce_factor*len(files)), 1)
 
     if "MetaData" in files[0] or len(files) == 1: # if metadata or only 1 file, return as is
         return files
     elif "ImageData/train/stylegan3-80K" in files[0]:
         return files
+    elif "ImageData/train/IFv1-CC1M" in files[0]:
+        train_reduce_factor = 0.08
+        train_end_idx = max(int(train_reduce_factor*len(files)), 1)
+        files_subset = files[0:train_end_idx]
+    elif "ImageData/train/SDv15R-CC1M" in files[0]:
+        train_reduce_factor = 0.075
+        train_end_idx = max(int(train_reduce_factor*len(files)), 1)
+        files_subset = files[0:train_end_idx]
     elif "ImageData/train" in files[0]:
+        train_end_idx = max(int(train_reduce_factor*len(files)), 1)
         files_subset = files[0:train_end_idx]
     elif "ImageData/val" in files[0]:
+        val_end_idx = max(int(val_reduce_factor*len(files)), 1)
         files_subset = files[0:val_end_idx]
     return files_subset
 
@@ -101,7 +109,7 @@ def batch_convert_png_jpg(png_paths):
 
 def download_image_files_as_jpg(all_subdirs,
                                 repo_id, 
-                                local_dataset_dir, 
+                                local_dataset_dir,
                                 train_reduce_factor=.075, 
                                 val_reduce_factor=.5):
     jpg_paths_by_source = {}
@@ -126,7 +134,7 @@ def download_image_files_as_jpg(all_subdirs,
             os.makedirs(temp_save_dir, exist_ok=True)
 
             # download all image files for a single data source
-            for file in files:
+            for file_idx, file in enumerate(files):
                 os.system(f"echo DOWNLOADING: {file.rpartition('/')[-1]}")
                 file_path = f"{local_dataset_dir}/{file}"
 
@@ -136,7 +144,7 @@ def download_image_files_as_jpg(all_subdirs,
                                 filename=file,
                                 local_dir=local_dataset_dir, 
                                 local_dir_use_symlinks=False)
-                
+            # cat and extract files
             fname = f"{local_dataset_dir}/{file.partition('.')[0]}"
             if filesNumbered: # handle non-numbered tar files 
                 # cat all tar files together
@@ -203,7 +211,7 @@ if __name__ == "__main__":
                                                                            args.repo_id)
     # print([all_image_subdirs[0]])
     # download all images in jpg format 
-    jpg_paths_by_source = download_image_files_as_jpg(all_image_subdirs, 
+    jpg_paths_by_source = download_image_files_as_jpg([[all_image_subdirs[0][0]]], 
                                                       args.repo_id, 
                                                       args.local_dataset_path)
     # generate all image annotations

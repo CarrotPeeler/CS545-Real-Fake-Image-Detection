@@ -33,7 +33,7 @@ After downloading the data, there should be 481k train images and 187k validatio
 ## Active Learning
 We leverage Active Learning in an attempt to improve/maintain model performance while reducing the overall size of the training data.
 
-An example of how to use the Active Learning code is located in [UniversalFakeDetect/train.py](https://github.com/CarrotPeeler/CS545-Real-Fake-Image-Detection/blob/main/UniversalFakeDetect/train.py).
+An example of how to use the Active Learning code is located in [UniversalFakeDetect/train.py](https://github.com/CarrotPeeler/CS545-Real-Fake-Image-Detection/blob/main/UniversalFakeDetect/train.py) under the `train_active_learning()` function.
 
 
 ## Training the Models

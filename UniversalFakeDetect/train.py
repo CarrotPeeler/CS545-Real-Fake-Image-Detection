@@ -174,7 +174,7 @@ def train_active_learning(opt, val_opt):
     # create init_train, val, and pool datasets
 
     # fake/real train samples are both ~240k, sample random indices for init
-    init_idxs = np.random.choice(240000, 1500)#opt.num_samples_per_class) 
+    init_idxs = np.random.choice(240000, opt.num_samples_per_class) 
     init_dataset = RealFakeDataset(opt, "init", init_idxs)
     pool_dataset = RealFakeDataset(opt, "pool", init_idxs)
     val_dataset = RealFakeDataset(val_opt)
