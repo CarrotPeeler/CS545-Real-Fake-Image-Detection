@@ -80,6 +80,10 @@ class RealFakeDataset(Dataset):
                 real_subdirs = ["afhq-v2", "cc3m", "ffhq"]
                 fake_subdirs = ["IFv1-CC1M/IFv1-dpmsolver++-50-1M", 
                                 "SDv15R-CC1M/SDv15R-dpmsolver-25-1M", 
+                                "stylegan3-80K/stylegan3-r-afhqv2-512x512",
+                                "stylegan3-80K/stylegan3-r-ffhqu-1024x1024", 
+                                "stylegan3-80K/stylegan3-r-metfaces-1024x1024", 
+                                "stylegan3-80K/stylegan3-t-afhqv2-512x512", 
                                 "stylegan3-80K/stylegan3-t-ffhqu-1024x1024",
                                 "stylegan3-80K/stylegan3-t-metfaces-1024x1024"]
 

@@ -90,7 +90,7 @@ def get_val_opt():
     return val_opt
 
 
-def train(model, opt, val_opt):
+def train(opt, val_opt):
     set_seed(opt.seed)
 
     if len(opt.gpu_ids) > 1:
