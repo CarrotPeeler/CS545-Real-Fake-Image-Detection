@@ -8,7 +8,9 @@ pip install -r requirements.txt
 ```
 
 ## Getting the Data
-We use a subset of the [Sentry dataset](https://huggingface.co/datasets/InfImagine/FakeImageDataset) for training and testing models. All images are compressed as JPGs to reduce size and mimic the format used most commonly for uploading images to websites and the internet. The subset we partition contains 240k fake and 240k real images.
+We use a subset of the [Sentry dataset](https://huggingface.co/datasets/InfImagine/FakeImageDataset) for training and testing models. All images are resized to 256x256 and compressed as JPGs to reduce size and mimic the format used most commonly for uploading images to websites and the internet. The subset we partition contains 240k fake and 240k real images.
+
+Download the dataset from Kaggle [here](https://www.kaggle.com/datasets/carrotpeeler/sentry-subset). Alternatively, use the scripts below to manually download the fake and real data. The scripts allow for custom partition sizes of the fake data.
 
 ```bash
 cd CS545-Real-Fake-Image-Detection
@@ -29,6 +31,7 @@ python3 datagen/cc3m/add_real_data.py < /dev/null > log.txt 2>&1 &
 ```
 
 After downloading the data, there should be 481k train images and 187k validation images. 
+
 
 ## Active Learning
 We leverage Active Learning in an attempt to improve/maintain model performance while reducing the overall size of the training data.
