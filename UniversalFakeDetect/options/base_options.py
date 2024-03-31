@@ -65,7 +65,8 @@ class BaseOptions():
         )
         parser.add_argument(
         "--use_mc_dropout",
-        action='store_true',
+        type=bool,
+        default=True,
         help="enable or disable Monte Carlo Dropout for Active Learning",
         )
         parser.add_argument(
