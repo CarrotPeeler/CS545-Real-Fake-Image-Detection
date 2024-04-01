@@ -212,6 +212,13 @@ def active_learning_procedure(
         model_accuracy_val = learner.score(X_val, y_val)
         perf_hist.append(model_accuracy_val)
 
+        # create model checkpoint
+        if (index + 1) % opt.save_epoch_freq == 0:
+            print('saving the model at the end of epoch %d' % (index + 1))
+            # save model weights
+            learner.estimator.save_params(f_params=f"{save_dir}/dropout_iter_{(index + 1)}.pkl")
+        
+        # validate model
         if (index + 1) % opt.val_freq == 0:
             print(f"Val Accuracy after dropout iter {index+1}: {model_accuracy_val:0.4f}")
             
