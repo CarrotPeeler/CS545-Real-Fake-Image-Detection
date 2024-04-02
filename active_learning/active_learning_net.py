@@ -141,6 +141,29 @@ class SliceActiveLearner(BaseLearner):
             self._fit_on_new(X, y, bootstrap=bootstrap, **fit_kwargs)
 
 
+    def query(self, X_pool, *query_args, return_metrics: bool = False, **query_kwargs):
+        """
+        Finds the n_instances most informative point in the data provided by calling the query_strategy function.
+
+        Args:
+            X_pool: Pool of unlabeled instances to retrieve most informative instances from
+            return_metrics: boolean to indicate, if the corresponding query metrics should be (not) returned
+            *query_args: The arguments for the query strategy. For instance, in the case of
+                :func:`~modAL.uncertainty.uncertainty_sampling`, it is the pool of samples from which the query strategy
+                should choose instances to request labels.
+            **query_kwargs: Keyword arguments for the query strategy function.
+
+        Returns:
+            Value of the query_strategy function. Should be the indices of the instances from the pool chosen to be
+            labelled and the instances themselves. Can be different in other cases, for instance only the instance to be
+            labelled upon query synthesis.
+            query_metrics: returns also the corresponding metrics, if return_metrics == True
+        """
+        query_idx, query_instance = self.query_strategy(
+            self, X_pool, *query_args, **query_kwargs)
+        return query_idx, query_instance
+
+
     def score(self, X: SliceDataset, y: SliceDataset, **score_kwargs) -> Any:
         """
         Interface for the score method of the predictor.
@@ -203,7 +226,7 @@ def active_learning_procedure(
     early_stopping = EarlyStopping(patience=opt.earlystop_epoch, delta=-0.001, verbose=True)
     for index in range(T):
         query_idx, query_instance = learner.query(
-            pool_dataset, n_query=n_query, T=T, training=training
+            pool_dataset, n_query=n_query, T=T, training=training, opt=opt
         )
         learner.teach(query_instance)
 

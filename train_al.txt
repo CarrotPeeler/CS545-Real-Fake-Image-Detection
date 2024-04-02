@@ -13,7 +13,7 @@
                data_label: train                         
                 data_mode: dip                           	[default: ours]
              dist_backend: nccl                          
-             dropout_iter: 50                            	[default: 10]
+             dropout_iter: 20                            	[default: 10]
           earlystop_epoch: 5                             
               epoch_count: 1                             
            fake_list_path: None                          
@@ -34,7 +34,7 @@
                      mode: binary                        
                      name: clip_rn50_al                  	[default: experiment_name]
                 new_optim: False                         
-                    niter: 50                            	[default: 100]
+                    niter: 1                             	[default: 100]
                   no_flip: False                         
     num_samples_per_class: 5000                          
                num_shards: 1                             
@@ -72,14 +72,8 @@ NUM VAL SAMPLES: 14000
 NUM TEST SETS: 14 | NUM TEST SAMPLES: 186828
   epoch    train_loss      dur
 -------  ------------  -------
-      1        [36m0.6919[0m  45.6670
-      2        [36m0.6886[0m  43.9439
-      3        [36m0.6855[0m  44.0535
-      4        [36m0.6823[0m  44.7025
-      5        [36m0.6792[0m  44.4306
-      6        [36m0.6761[0m  44.4200
-      7        [36m0.6732[0m  44.0780
-      8        [36m0.6701[0m  44.5608
-      9        [36m0.6668[0m  43.8954
-     10        [36m0.6644[0m  44.3780
-     11        [36m0.6610[0m  44.1004
+      1        [36m0.6919[0m  45.3332
+Re-initializing optimizer.
+  epoch    train_loss      dur
+-------  ------------  -------
+      1        [36m0.6885[0m  48.9528
