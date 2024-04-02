@@ -191,7 +191,7 @@ def active_learning_procedure(
     """
     save_dir = os.path.join(opt.checkpoints_dir, opt.name)
     X_val, y_val = SliceDataset(val_dataset,idx=0), SliceDataset(val_dataset,idx=1)
-
+    
     learner = SliceActiveLearner(
         estimator=estimator,
         training=init_dataset,
@@ -252,10 +252,10 @@ def select_acq_function(acq_func: int = 0) -> list:
     """
     acq_func_dict = {
         0: [uniform, max_entropy, bald, var_ratios, mean_std],
-        1: [uniform],
-        2: [max_entropy],
-        3: [bald],
-        4: [var_ratios],
-        5: [mean_std],
+        1: uniform,
+        2: max_entropy,
+        3: bald,
+        4: var_ratios,
+        5: mean_std,
     }
     return acq_func_dict[acq_func]

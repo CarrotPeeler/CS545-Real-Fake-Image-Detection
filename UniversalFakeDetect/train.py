@@ -197,6 +197,8 @@ def train_active_learning(opt, val_opt):
                                     n_query=opt.query,
                                     training=opt.use_mc_dropout,
                                 )
+    print(f"TRAINING HISTORY:\n{training_hist}")
+    print(f"TEST ACCURACY BY DATASET:\n{test_score}")
 
 
 if __name__ == '__main__':
