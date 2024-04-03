@@ -59,8 +59,8 @@ def validate(opt, model:Trainer, val_dataset: Dataset):
                                              num_workers=opt.num_threads)
     ap, r_acc, f_acc, acc = val(model.model, val_loader, gpu_id=model.device)
     if len(opt.gpu_ids) > 1:
-        ap, acc = du.all_reduce([ap, acc])
-    return acc, ap
+        ap, r_acc, f_acc, acc = du.all_reduce([ap, r_acc, f_acc, acc])
+    return acc, r_acc, f_acc, ap
 
 
 def active_learning_procedure(
@@ -88,6 +88,7 @@ def active_learning_procedure(
         n_query: Number of points to query from X_pool
         training: If False, run test without MC Dropout (default: True)
     """
+    print("Performing Training on Initial Dataset...")
     learner = TorchActiveLearner(
         opt=opt,
         model=model,
@@ -101,7 +102,11 @@ def active_learning_procedure(
     v_s_t = time.time()
     perf_hist = [learner.score(val_dataset)]
     v_e_t = time.time()
-    print(f"Validation Time: {(v_e_t - v_s_t):0.4f}s")
+    print(f"Validation Time: {(v_e_t - v_s_t):0.4f}s\
+          | Acc: {perf_hist[0][0]:0.4f}\
+          | R_Acc: {perf_hist[0][1]:0.4f}\
+          | F_Acc: {perf_hist[0][2]:0.4f}\
+          | AP: {perf_hist[0][3]:0.4f}")
 
     early_stopping = EarlyStopping(patience=opt.earlystop_epoch, delta=-0.001, verbose=True)
     for index in tqdm(range(T)):
@@ -135,10 +140,13 @@ def active_learning_procedure(
         
         # validate model
         if index % opt.val_freq == 0:      
-            acc, ap = learner.score(val_dataset)
+            acc, r_acc, f_acc, ap = learner.score(val_dataset)
             perf_hist.append((acc, ap))
 
-            print(f"Val Acc: {acc:0.4f} | AP: {ap:0.4f}")
+            print(f"Val Acc: {acc:0.4f}\
+                  | R_Acc: {r_acc:0.4f}\
+                  | F_Acc: {f_acc:0.4f}\
+                  | AP: {ap:0.4f}")
             
             early_stopping(acc, learner.model)
             if early_stopping.early_stop:

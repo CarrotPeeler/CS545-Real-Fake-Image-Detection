@@ -32,6 +32,7 @@ def predictions_from_pool(
                 for _ in range(T)
             ]
         )
+    outputs = np.squeeze(outputs, axis=-1)
     return outputs, random_subset_idxs
 
 

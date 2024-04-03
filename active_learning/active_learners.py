@@ -208,8 +208,7 @@ class TorchActiveLearner(BaseLearner):
         Returns:
             The score of the predictor.
         """
-        acc, ap = self.validate(dataset)
-        return acc, ap
+        return self.validate(dataset)
     
 
     def forward(self, dataset: Dataset, training: bool):

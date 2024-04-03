@@ -150,7 +150,7 @@ class RealFakeDataset(Dataset):
         for i in fake_list:
             self.labels_dict[i] = 1.0
 
-        self.total_list = np.concatenate([real_list, fake_list])
+        self.total_list = np.concatenate([real_list.data, fake_list.data])
         shuffle(self.total_list)
         if opt.isTrain:
             crop_func = transforms.RandomCrop(opt.cropSize)
