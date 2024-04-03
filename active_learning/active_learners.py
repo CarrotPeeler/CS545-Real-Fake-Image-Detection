@@ -1,4 +1,4 @@
-
+import torch
 import numpy as np
 from UniversalFakeDetect.networks.trainer import Trainer
 from torch.utils.data import ConcatDataset, Dataset, Subset
@@ -210,3 +210,32 @@ class TorchActiveLearner(BaseLearner):
         """
         acc, ap = self.validate(dataset)
         return acc, ap
+    
+
+    def forward(self, dataset: Dataset, training: bool):
+        """
+        Performs forward pass of the model on a dataset 
+        Only use for Active Learning to perform inference with dropout layers enabled for Monte Carlo Dropout
+
+        args:
+            dataset: Torch Dataset
+            training: whether to enable dropout layers for MC Dropout
+        """
+        loader = torch.utils.data.DataLoader(dataset, 
+                                             batch_size=self.opt.batch_size, 
+                                             shuffle=False, 
+                                             num_workers=self.opt.num_threads)
+        with torch.set_grad_enabled(training):
+            self.model.train(training)
+            
+            logits = []
+            # perform mini-batch inference
+            for i, data in enumerate(loader):
+                self.model.set_input(data)
+                out = self.model.forward_raw()
+                logits.append(out)
+            
+            logits = torch.cat(logits)
+        return logits
+                
+

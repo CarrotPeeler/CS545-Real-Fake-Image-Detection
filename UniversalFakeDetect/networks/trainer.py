@@ -81,6 +81,10 @@ class Trainer(BaseModel):
         self.output = self.model(self.input)
         self.output = self.output.view(-1).unsqueeze(1)
 
+    
+    def forward_raw(self):
+        return self.model(self.input)
+
 
     def get_loss(self):
         return self.loss_fn(self.output.squeeze(1), self.label)
