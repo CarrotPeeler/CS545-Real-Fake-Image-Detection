@@ -14,31 +14,8 @@ from tqdm.auto import tqdm
 import torch
 import distributed as du
 import numpy as np
-from skorch import NeuralNetBinaryClassifier
-from active_learning.active_learning_net import active_learning_procedure, select_acq_function, SliceActiveLearner
+from active_learning.active_learning_net import active_learning_procedure, select_acq_function
 from util import set_seed
-from skorch.helper import SliceDataset
-
-
-def load_al_model(model, opt):
-    """Scikit-Learn wrapper for PyTorch models"""
-    if opt.optim == 'adam':
-        optimizer = torch.optim.AdamW
-    elif opt.optim == 'sgd':
-        optimizer = torch.optim.SGD
-
-    estimator = NeuralNetBinaryClassifier(
-        module=model.model,
-        lr=opt.lr,
-        batch_size=opt.batch_size,
-        max_epochs=opt.niter,
-        criterion=torch.nn.BCEWithLogitsLoss,
-        optimizer=optimizer,
-        train_split=None,
-        verbose=1,
-        device=model.device,
-    )
-    return estimator
 
 
 def create_test_datasets(opt):
@@ -168,7 +145,6 @@ def train_active_learning(opt, val_opt):
     os.makedirs(os.path.join(opt.checkpoints_dir, opt.name), exist_ok=True)
 
     model = Trainer(opt) # load trainer
-    estimator = load_al_model(model, opt) # wrap trainer 
 
     # create init_train, val, and pool datasets
 
@@ -192,12 +168,12 @@ def train_active_learning(opt, val_opt):
                                     pool_dataset=pool_dataset,
                                     val_dataset=val_dataset,
                                     test_datasets=test_dict,
-                                    estimator=estimator,
+                                    model=model,
                                     T=opt.dropout_iter,
                                     n_query=opt.query,
                                     training=opt.use_mc_dropout,
                                 )
-    print(f"TRAINING HISTORY:\n{training_hist}")
+    print(f"TRAINING HISTORY (ACC, AP):\n{training_hist}")
     print(f"TEST ACCURACY BY DATASET:\n{test_score}")
 
 

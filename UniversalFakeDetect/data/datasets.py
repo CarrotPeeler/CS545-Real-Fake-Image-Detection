@@ -146,9 +146,9 @@ class RealFakeDataset(Dataset):
         # setting the labels for the dataset
         self.labels_dict = {}
         for i in real_list:
-            self.labels_dict[i] = 0
+            self.labels_dict[i] = 0.0
         for i in fake_list:
-            self.labels_dict[i] = 1
+            self.labels_dict[i] = 1.0
 
         self.total_list = np.concatenate([real_list, fake_list])
         shuffle(self.total_list)
@@ -191,7 +191,12 @@ class RealFakeDataset(Dataset):
         """
         Remove samples given a sequence of indices
         """
+        items_to_remove = self.total_list[idxs]
+        # remove X data
         self.total_list = np.delete(self.total_list, idxs, axis=0)
+        # remove y data
+        for item in items_to_remove:
+            self.labels_dict.pop(item)
 
 
     def __len__(self):
