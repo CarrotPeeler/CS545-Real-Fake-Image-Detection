@@ -8,8 +8,9 @@ from tqdm.auto import tqdm
 from torch.utils.data import Dataset, Subset
 from skorch.helper import SliceDataset
 
+
 def predictions_from_pool(
-    model, X_pool: Dataset, opt, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, pool_idxs:np.ndarray, T: int = 100, training: bool = True
 ):
     """Run random_subset prediction on model and return the output
 
@@ -18,7 +19,7 @@ def predictions_from_pool(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    random_subset = np.random.choice(range(len(X_pool)), size=2000, replace=False)
+    random_subset = np.random.choice(pool_idxs, size=2000, replace=False)
     X_pool = SliceDataset(X_pool, idx=0)
 
     with torch.no_grad():
@@ -37,7 +38,7 @@ def predictions_from_pool(
 
 
 def uniform(
-    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, pool_idxs:np.ndarray, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Baseline acquisition a(x) = unif() with unif() a function
     returning a draw from a uniform distribution over the interval [0,1].
@@ -49,13 +50,13 @@ def uniform(
         n_query: Number of points that randomly select from pool set,
         training: If False, run test without MC dropout. (default=True)
     """
-    query_idx = np.random.choice(range(len(X_pool)), size=n_query, replace=False)
+    query_idx = np.random.choice(pool_idxs, size=n_query, replace=False)
     subset = Subset(X_pool, query_idx)
     return query_idx, subset
 
 
 def shannon_entropy_function(
-    model, X_pool: Dataset, opt, T: int = 100, E_H: bool = False, training: bool = True
+    model, X_pool: Dataset, opt, pool_idxs:np.ndarray, T: int = 100, E_H: bool = False, training: bool = True
 ):
     """H[y|x,D_train] := - sum_{c} p(y=c|x,D_train)log p(y=c|x,D_train)
 
@@ -66,7 +67,7 @@ def shannon_entropy_function(
         E_H: If True, compute H and EH for BALD (default: False),
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset = predictions_from_pool(model, X_pool, opt, T, training=training)
+    outputs, random_subset = predictions_from_pool(model, X_pool, opt, pool_idxs, T, training=training)
     pc = outputs.mean(axis=0)
     # Binary Shannon Entropy
     H = (-pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)) # To avoid division with zero, add 1e-10
@@ -79,7 +80,7 @@ def shannon_entropy_function(
 
 
 def max_entropy(
-    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, pool_idxs:np.ndarray, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Choose pool points that maximise the predictive entropy.
     Using Shannon entropy function.
@@ -92,7 +93,7 @@ def max_entropy(
         training: If False, run test without MC dropout. (default=True)
     """
     acquisition, random_subset = shannon_entropy_function(
-        model, X_pool, opt, T, training=training
+        model, X_pool, opt, pool_idxs, T, training=training
     )
     idx = (-acquisition).argsort()[:n_query] # retrieve n highest entropy sample idxs
     query_idx = random_subset[idx] # fetch pool idxs that correspond to the n sample idxs from the random subset
@@ -101,7 +102,7 @@ def max_entropy(
 
 
 def bald(
-    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, pool_idxs:np.ndarray, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Choose pool points that are expected to maximise the information
     gained about the model parameters, i.e. maximise the mutal information
@@ -121,7 +122,7 @@ def bald(
         training: If False, run test without MC dropout. (default=True)
     """
     H, E_H, random_subset = shannon_entropy_function(
-        model, X_pool, opt, T, E_H=True, training=training
+        model, X_pool, opt, pool_idxs, T, E_H=True, training=training
     )
     acquisition = H - E_H
     idx = (-acquisition).argsort()[:n_query]
@@ -131,7 +132,7 @@ def bald(
 
 
 def var_ratios(
-    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, pool_idxs:np.ndarray, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Like Max Entropy but Variational Ratios measures lack of confidence.
     Given: variational_ratio[x] := 1 - max_{y} p(y|x,D_{train})
@@ -143,7 +144,7 @@ def var_ratios(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset = predictions_from_pool(model, X_pool, opt, T, training)
+    outputs, random_subset = predictions_from_pool(model, X_pool, opt, pool_idxs, T, training)
     # get binary preds
     preds = (outputs[:, :] > model.estimator.threshold).astype('uint8')
     _, count = stats.mode(preds, axis=0, keepdims=False)
@@ -155,7 +156,7 @@ def var_ratios(
 
 
 def mean_std(
-    model, X_pool: Dataset, opt, n_query: int = 10, T: int = 100, training: bool = True
+    model, X_pool: Dataset, opt, pool_idxs:np.ndarray, n_query: int = 10, T: int = 100, training: bool = True
 ):
     """Maximise mean standard deviation
     Given: sigma_c = sqrt(E_{q(w)}[p(y=c|x,w)^2]-E_{q(w)}[p(y=c|x,w)]^2)
@@ -167,7 +168,7 @@ def mean_std(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset = predictions_from_pool(model, X_pool, opt, T, training)
+    outputs, random_subset = predictions_from_pool(model, X_pool, opt, pool_idxs, T, training)
     outputs_pos = outputs
     outputs_neg = 1 - outputs_pos
 

@@ -75,7 +75,7 @@ class TorchActiveLearner(BaseLearner):
         else:
             self.train_dataset = ConcatDataset([self.train_dataset, dataset])
         
-        print(f"Train Size: {len(self.train_dataset)}")
+        print(f"Updated Train Size: {len(self.train_dataset)}")
 
 
     def _fit_to_known(self, bootstrap: bool = False, **fit_kwargs) -> 'BaseLearner':

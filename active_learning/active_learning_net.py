@@ -1,6 +1,6 @@
 # Source: https://github.com/lunayht/DBALwithImgData 
 
-import os
+import numpy as np
 import time
 import torch
 import UniversalFakeDetect.distributed as du
@@ -88,8 +88,6 @@ def active_learning_procedure(
         n_query: Number of points to query from X_pool
         training: If False, run test without MC Dropout (default: True)
     """
-    save_dir = os.path.join(opt.checkpoints_dir, opt.name)
-    
     learner = TorchActiveLearner(
         opt=opt,
         model=model,
@@ -98,6 +96,7 @@ def active_learning_procedure(
         train_func=train,
         val_func=validate
     )
+    pool_idxs = np.array(range(len(pool_dataset)))
 
     v_s_t = time.time()
     perf_hist = [learner.score(val_dataset)]
@@ -106,17 +105,27 @@ def active_learning_procedure(
 
     early_stopping = EarlyStopping(patience=opt.earlystop_epoch, delta=-0.001, verbose=True)
     for index in tqdm(range(T)):
-        print(f"Dropout Iter: {index}\nPool Size: {len(pool_dataset)}")
+        print(f"\nDropout Iter: {index}")
 
         q_s_t = time.time()
-        query_idx, query_instance = learner.query(
-            pool_dataset, n_query=n_query, T=T, training=training, opt=opt
+        query_idxs, query_instance = learner.query(
+            pool_dataset, 
+            opt=opt,
+            pool_idxs=pool_idxs, 
+            n_query=n_query, 
+            T=T, 
+            training=training
         )
         q_e_t = time.time()
         print(f"QUERY TIME: {(q_e_t - q_s_t):0.4f}s")
 
+        # train model over new queried data
         learner.teach(query_instance)
-        pool_dataset.remove_samples(query_idx)
+
+        # remove queried data from pool
+        remove_idxs = np.concatenate([np.where(pool_idxs == x)[0] for x in query_idxs])
+        pool_idxs = np.delete(pool_idxs, remove_idxs)
+        print(f"Updated Pool Size: {len(pool_idxs)}")
 
         # create model checkpoint
         if index % opt.save_epoch_freq == 0:
