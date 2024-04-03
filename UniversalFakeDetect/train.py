@@ -152,45 +152,29 @@ def train_active_learning(opt, val_opt):
     init_idxs = np.random.choice(240000, opt.num_samples_per_class) 
     init_dataset = RealFakeDataset(opt, "init", init_idxs)
     pool_dataset = RealFakeDataset(opt, "pool", init_idxs)
+    val_dataset = RealFakeDataset(val_opt)
+    test_dict, test_metadata = create_test_datasets(opt)
 
-
-    from active_learning.active_learners import TorchActiveLearner
-    from active_learning.acquisition_functions import max_entropy
-    learner = TorchActiveLearner(
-        opt=opt,
-        model=model,
-        query_strategy=max_entropy,
-        train_func=None,
-        val_func=None
-    )
-    pool_idxs = np.array(range(len(pool_dataset)))
-    s_t = time.time()
-    query_idxs, query_samples = max_entropy(learner, pool_dataset, opt, pool_idxs, n_query=1000, T=10)
-    e_t = time.time()
-    print(f"QUERY TIME: {(e_t - s_t):0.4f}s")
-    # val_dataset = RealFakeDataset(val_opt)
-    # test_dict, test_metadata = create_test_datasets(opt)
-
-    # print(f"NUM INIT SAMPLES: {len(init_dataset)}\
-    #       \nNUM POOL SAMPLES: {len(pool_dataset)}\
-    #       \nNUM VAL SAMPLES: {len(val_dataset)}\
-    #       \nNUM TEST SETS: {test_metadata[0]} | NUM TEST SAMPLES: {test_metadata[1]}")
+    print(f"NUM INIT SAMPLES: {len(init_dataset)}\
+          \nNUM POOL SAMPLES: {len(pool_dataset)}\
+          \nNUM VAL SAMPLES: {len(val_dataset)}\
+          \nNUM TEST SETS: {test_metadata[0]} | NUM TEST SAMPLES: {test_metadata[1]}")
     
-    # acq_func = select_acq_function(opt.acq_func)
-    # training_hist, test_score = active_learning_procedure(
-    #                                 opt=opt,
-    #                                 query_strategy=acq_func,
-    #                                 init_dataset=init_dataset,
-    #                                 pool_dataset=pool_dataset,
-    #                                 val_dataset=val_dataset,
-    #                                 test_datasets=test_dict,
-    #                                 model=model,
-    #                                 T=opt.dropout_iter,
-    #                                 n_query=opt.query,
-    #                                 training=opt.use_mc_dropout,
-    #                             )
-    # print(f"TRAINING HISTORY (ACC, AP):\n{training_hist}")
-    # print(f"TEST ACCURACY BY DATASET:\n{test_score}")
+    acq_func = select_acq_function(opt.acq_func)
+    training_hist, test_score = active_learning_procedure(
+                                    opt=opt,
+                                    query_strategy=acq_func,
+                                    init_dataset=init_dataset,
+                                    pool_dataset=pool_dataset,
+                                    val_dataset=val_dataset,
+                                    test_datasets=test_dict,
+                                    model=model,
+                                    T=opt.dropout_iter,
+                                    n_query=opt.query,
+                                    training=opt.use_mc_dropout,
+                                )
+    print(f"TRAINING HISTORY (ACC, AP):\n{training_hist}")
+    print(f"TEST ACCURACY BY DATASET:\n{test_score}")
 
 
 if __name__ == '__main__':

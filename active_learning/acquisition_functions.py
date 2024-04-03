@@ -144,7 +144,7 @@ def var_ratios(
     """
     outputs, random_subset = predictions_from_pool(learner, X_pool, opt, pool_idxs, T, training)
     # get binary preds
-    preds = (outputs[:, :] > learner.estimator.threshold).astype('uint8')
+    preds = (outputs[:, :] > 0.5).astype('uint8')
     _, count = stats.mode(preds, axis=0, keepdims=False)
     acquisition = (1 - count / T).reshape((-1,))
     idx = (-acquisition).argsort()[:n_query]
