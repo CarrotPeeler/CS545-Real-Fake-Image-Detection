@@ -59,28 +59,34 @@ class BaseOptions():
             help="backend to use for distributed processing"
         )
         parser.add_argument(
-        "--use_active_learning",
-        action='store_true',
-        help="enable or disable Active Learning",
+            "--use_active_learning",
+            action='store_true',
+            help="enable or disable Active Learning",
         )
         parser.add_argument(
-        "--use_mc_dropout",
-        type=bool,
-        default=True,
-        help="enable or disable Monte Carlo Dropout for Active Learning",
+            "--use_mc_dropout",
+            type=bool,
+            default=True,
+            help="enable or disable Monte Carlo Dropout for Active Learning",
         )
         parser.add_argument(
-        "--num_samples_per_class",
-        type=int,
-        default=5000,
-        help="how many datapoints to sample from each class to generate initial train set for Active Learning",
+            "--num_samples_per_class",
+            type=int,
+            default=5000,
+            help="how many datapoints to sample from each class to generate initial train set for Active Learning",
         )
         parser.add_argument(
-        "--dropout_iter",
-        type=int,
-        default=10,
-        metavar="T",
-        help="dropout iterations,T (default: 100) for Active Learning",
+            "--dropout_iter",
+            type=int,
+            default=10,
+            metavar="T",
+            help="MC Dropout iterations, T (default: 10) for Active Learning",
+        )
+        parser.add_argument(
+            "--al_iter",
+            type=int,
+            default=10,
+            help="Active Learning Iterations (Training Loops)",
         )
         parser.add_argument(
             "--query",

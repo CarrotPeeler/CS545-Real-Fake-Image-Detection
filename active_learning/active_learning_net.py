@@ -72,6 +72,7 @@ def active_learning_procedure(
     test_datasets: Dict[str, Dataset],
     model: Trainer,
     T: int = 100,
+    n_iters: int = 10,
     n_query: int = 10,
     training: bool = True,
 ):
@@ -85,6 +86,7 @@ def active_learning_procedure(
         test_datsets: dict of Dataset objects, one for each test source
         estimator: Neural Network architecture, e.g. CNN
         T: Number of MC dropout iterations (repeat acqusition process T times)
+        n_iters: Number of active learning iterations
         n_query: Number of points to query from X_pool
         training: If False, run test without MC Dropout (default: True)
     """
@@ -109,7 +111,7 @@ def active_learning_procedure(
           | AP: {perf_hist[0][3]:0.4f}")
 
     early_stopping = EarlyStopping(patience=opt.earlystop_epoch, delta=-0.001, verbose=True)
-    for index in tqdm(range(T)):
+    for index in tqdm(range(n_iters)):
         print(f"\nDropout Iter: {index}")
 
         q_s_t = time.time()

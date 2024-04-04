@@ -170,6 +170,7 @@ def train_active_learning(opt, val_opt):
                                     test_datasets=test_dict,
                                     model=model,
                                     T=opt.dropout_iter,
+                                    n_iters=opt.al_iter,
                                     n_query=opt.query,
                                     training=opt.use_mc_dropout,
                                 )
