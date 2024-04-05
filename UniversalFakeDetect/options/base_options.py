@@ -96,6 +96,12 @@ class BaseOptions():
             help="number of queries for Active Learning",
         )
         parser.add_argument(
+            "--subsample_size",
+            type=int,
+            default=10000,
+            help="number of images to randomly subsample from the pool for MC Dropout inference (Query step in Active Learning)",
+        )
+        parser.add_argument(
             "--acq_func",
             type=int,
             default=2,

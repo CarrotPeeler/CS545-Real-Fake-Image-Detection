@@ -74,6 +74,7 @@ def active_learning_procedure(
     T: int = 100,
     n_iters: int = 10,
     n_query: int = 10,
+    subsample_size=10000,
     training: bool = True,
 ):
     """Active Learning Procedure
@@ -121,6 +122,7 @@ def active_learning_procedure(
             pool_idxs=pool_idxs, 
             n_query=n_query, 
             T=T, 
+            subsample_size=subsample_size,
             training=training
         )
         q_e_t = time.time()

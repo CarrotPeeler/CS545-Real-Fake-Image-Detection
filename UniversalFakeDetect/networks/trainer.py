@@ -15,7 +15,12 @@ class Trainer(BaseModel):
         self.model = get_model(opt.arch)
 
         if opt.ckpt is not None:
+            print(f"Loading Checkpoint from {opt.ckpt}")
             state_dict = torch.load(opt.ckpt, map_location='cpu')
+            if "model" in list(state_dict.keys()):
+                state_dict = state_dict["model"]
+                state_dict = {"weight":state_dict["fc.weight"],
+                                "bias":state_dict["fc.bias"]}
             self.model.fc.load_state_dict(state_dict)
         else:
             torch.nn.init.normal_(self.model.fc.weight.data, 0.0, opt.init_gain)

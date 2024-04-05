@@ -172,6 +172,7 @@ def train_active_learning(opt, val_opt):
                                     T=opt.dropout_iter,
                                     n_iters=opt.al_iter,
                                     n_query=opt.query,
+                                    subsample_size=opt.subsample_size,
                                     training=opt.use_mc_dropout,
                                 )
     print(f"TRAINING HISTORY (ACC, AP):\n{training_hist}")
