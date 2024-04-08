@@ -5,6 +5,7 @@ import torch.nn as nn
 
 CHANNELS = {
     "RN50" : 1024,
+    "RN101": 512,
     "ViT-L/14" : 768
 }
 

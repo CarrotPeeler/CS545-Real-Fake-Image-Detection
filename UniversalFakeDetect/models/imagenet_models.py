@@ -1,3 +1,4 @@
+from .vgg import vgg11, vgg19
 from .resnet import resnet18, resnet34, resnet50, resnet101, resnet152
 from .vision_transformer import vit_b_16, vit_b_32, vit_l_16, vit_l_32
 
@@ -8,6 +9,8 @@ import torch.nn as nn
 
 
 model_dict = {
+    'vgg11': vgg11,
+    'vgg19': vgg19,
     'resnet18': resnet18,
     'resnet34': resnet34,
     'resnet50': resnet50,
@@ -21,6 +24,12 @@ model_dict = {
 
 
 CHANNELS = {
+    "vgg11": 4096,
+    "vgg19": 4096,
+    "resnet18": 512,
+    "resnet34": 512,
+    "resnet101": 2048,
+    "resnet152": 2048,
     "resnet50" : 2048,
     "vit_b_16" : 768,
 }

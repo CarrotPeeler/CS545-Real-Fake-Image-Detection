@@ -39,6 +39,20 @@ We leverage Active Learning in an attempt to improve/maintain model performance 
 An example of how to use the Active Learning code is located in [UniversalFakeDetect/train.py](https://github.com/CarrotPeeler/CS545-Real-Fake-Image-Detection/blob/main/UniversalFakeDetect/train.py) under the `train_active_learning()` function.
 
 
+## Available Models
+The models currently available are listed below. The names listed can be directly input as an argument for the `--arch` option.
+- Imagenet:resnet18
+- Imagenet:resnet34
+- Imagenet:resnet50
+- Imagenet:resnet101
+- Imagenet:resnet152
+- Imagenet:vgg11
+- Imagenet:vgg19
+- Imagenet:vit_b_16
+- CLIP:RN50
+- CLIP:RN101
+- CLIP:ViT-L/14
+
 ## Training the Models
 
 
