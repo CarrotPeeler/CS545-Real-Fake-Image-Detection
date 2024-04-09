@@ -15,7 +15,7 @@ from active_learning.active_learners import TorchActiveLearner
 from active_learning.acquisition_functions import uniform, max_entropy, bald, var_ratios, mean_std
 
 
-def train(opt, model:Trainer, train_dataset: Dataset):
+def train(opt, model:Trainer, train_dataset: Dataset, query_weights: torch.Tensor=None):
     """Generic PyTorch train function"""
 
     train_loader = create_dataloader(opt, premade_dataset=train_dataset)
@@ -40,7 +40,12 @@ def train(opt, model:Trainer, train_dataset: Dataset):
             model.total_steps += 1
 
             model.set_input(data)
-            model.optimize_parameters()
+            
+            if opt.use_weighted_loss:
+                s_idx, e_idx = opt.batch_size * i, opt.batch_size * (i + 1) 
+                model.optimize_parameters(query_weights[s_idx:e_idx])
+            else:
+                model.optimize_parameters()
             
             # sync GPUs
             torch.cuda.synchronize()
@@ -116,7 +121,7 @@ def active_learning_procedure(
         print(f"\nDropout Iter: {index}")
 
         q_s_t = time.time()
-        query_idxs, query_instance = learner.query(
+        query_idxs, query_instance, query_scores = learner.query(
             pool_dataset, 
             opt=opt,
             pool_idxs=pool_idxs, 

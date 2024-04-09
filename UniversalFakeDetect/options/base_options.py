@@ -70,6 +70,12 @@ class BaseOptions():
             help="enable or disable Monte Carlo Dropout for Active Learning",
         )
         parser.add_argument(
+            "--use_weighted_loss",
+            type=bool,
+            default=True,
+            help="enable or disable weighted loss for Active Learning",
+        )
+        parser.add_argument(
             "--num_samples_per_class",
             type=int,
             default=5000,

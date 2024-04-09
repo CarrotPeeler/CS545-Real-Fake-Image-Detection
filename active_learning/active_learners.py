@@ -47,19 +47,24 @@ class TorchActiveLearner(BaseLearner):
         self.val_func = val_func
         self.train_dataset = train_dataset
 
+        if train_dataset is not None and opt.use_weighted_loss:
+            self.acq_weights = torch.ones(len(train_dataset)).to(model.device)
+        else:
+            self.acq_weights = None
+
         if train_dataset is not None:
             self._fit_to_known(bootstrap=bootstrap_init, **fit_kwargs)
 
     
     def train(self, dataset: Dataset):
-        self.train_func(self.opt, self.model, dataset)
+        self.train_func(self.opt, self.model, dataset, self.acq_weights)
 
 
     def validate(self, dataset: Dataset):
         return self.val_func(self.opt, self.model, dataset)
 
 
-    def _add_training_data(self, dataset: Dataset) -> None:
+    def _add_training_data(self, dataset: Dataset, query_scores=None) -> None:
         """
         Adds the new data and label to the known data, but does not retrain the model.
 
@@ -72,8 +77,18 @@ class TorchActiveLearner(BaseLearner):
         """
         if self.train_dataset is None:
             self.train_dataset = dataset
+
+            if self.opt.use_weighted_loss:
+                self.acq_weights = torch.ones(len(dataset)).to(self.model.device)
         else:
             self.train_dataset = ConcatDataset([self.train_dataset, dataset])
+            
+            if self.opt.use_weighted_loss:
+                wl = query_scores
+                query_weights = torch.tensor( 
+                    (wl - wl.min()) / (wl.max() - wl.min()) + 1 # min-max normalization w/ additive 1
+                ).to(self.model.device) 
+                self.acq_weights = torch.cat([self.acq_weights, query_weights])
         
         print(f"Updated Train Size: {len(self.train_dataset)}")
 
@@ -153,7 +168,7 @@ class TorchActiveLearner(BaseLearner):
         return self
 
 
-    def teach(self, dataset:Dataset, bootstrap: bool = False, only_new: bool = False, **fit_kwargs) -> None:
+    def teach(self, dataset:Dataset, query_scores=None, bootstrap: bool = False, only_new: bool = False, **fit_kwargs) -> None:
         """
         Adds X and y to the known training data and retrains the predictor with the augmented dataset.
 
@@ -168,7 +183,7 @@ class TorchActiveLearner(BaseLearner):
             **fit_kwargs: Keyword arguments to be passed to the fit method of the predictor.
         """
         if not only_new:
-            self._add_training_data(dataset)
+            self._add_training_data(dataset, query_scores)
             self._fit_to_known(bootstrap=bootstrap, **fit_kwargs)
         else:
             self._fit_on_new(dataset, bootstrap=bootstrap, **fit_kwargs)
@@ -192,9 +207,9 @@ class TorchActiveLearner(BaseLearner):
             labelled upon query synthesis.
             query_metrics: returns also the corresponding metrics, if return_metrics == True
         """
-        query_idx, query_instance = self.query_strategy(
+        query_idx, query_instance, query_score = self.query_strategy(
             self, X_pool, *query_args, **query_kwargs)
-        return query_idx, query_instance
+        return query_idx, query_instance, query_score
 
 
     def score(self, dataset: Dataset, **score_kwargs) -> Any:

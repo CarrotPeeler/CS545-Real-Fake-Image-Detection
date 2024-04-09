@@ -115,9 +115,10 @@ def max_entropy(
         learner, X_pool, opt, pool_idxs, T, subsample_size=subsample_size, training=training
     )
     idx = (-acquisition).argsort()[:n_query] # retrieve n highest entropy sample idxs
+    query_scores = acquisition[idx]
     query_idx = random_subset[idx] # fetch pool idxs that correspond to the n sample idxs from the random subset
     subset = Subset(X_pool, query_idx)
-    return query_idx, subset
+    return query_idx, subset, query_scores
 
 
 def bald(
@@ -152,9 +153,10 @@ def bald(
     )
     acquisition = H - E_H
     idx = (-acquisition).argsort()[:n_query]
+    query_scores = acquisition[idx]
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
-    return query_idx, subset
+    return query_idx, subset, query_scores
 
 
 def var_ratios(
@@ -183,9 +185,10 @@ def var_ratios(
     _, count = stats.mode(preds, axis=0, keepdims=False)
     acquisition = (1 - count / T).reshape((-1,))
     idx = (-acquisition).argsort()[:n_query]
+    query_scores = acquisition[idx]
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
-    return query_idx, subset
+    return query_idx, subset, query_scores
 
 
 def mean_std(
@@ -218,6 +221,7 @@ def mean_std(
     sigma_c = np.std(probs, axis=0)
     acquisition = np.mean(sigma_c, axis=-1)
     idx = (-acquisition).argsort()[:n_query]
+    query_scores = acquisition[idx]
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
-    return query_idx, subset
+    return query_idx, subset, query_scores

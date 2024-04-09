@@ -4,6 +4,7 @@ import torch.nn as nn
 from networks.base_model import BaseModel, init_weights
 import sys
 from models import get_model
+from active_learning.active_learning_loss import BCEWithLogitsLoss as DynamicWeightsBCE
 
 class Trainer(BaseModel):
     def name(self):
@@ -47,7 +48,7 @@ class Trainer(BaseModel):
         else:
             raise ValueError("optim should be [adam, sgd]")
 
-        self.loss_fn = nn.BCEWithLogitsLoss()
+        self.loss_fn = DynamicWeightsBCE() if opt.use_weighted_loss else nn.BCEWithLogitsLoss()
 
         # set current device and transfer model to it
         if len(opt.gpu_ids) > 1:
@@ -94,9 +95,16 @@ class Trainer(BaseModel):
     def get_loss(self):
         return self.loss_fn(self.output.squeeze(1), self.label)
 
-    def optimize_parameters(self):
+    def optimize_parameters(self, weights: torch.Tensor=None):
         self.forward()
-        self.loss = self.loss_fn(self.output.squeeze(1), self.label) 
+        if self.opt.use_weighted_loss:
+            assert weights is not None, "Error: given type None as weights"
+            self.loss = self.loss_fn(self.output.squeeze(1), 
+                                    self.label,
+                                    weights) 
+        else:
+            self.loss = self.loss_fn(self.output.squeeze(1), 
+                                    self.label)
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()
