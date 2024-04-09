@@ -64,6 +64,16 @@ class TorchActiveLearner(BaseLearner):
         return self.val_func(self.opt, self.model, dataset)
 
 
+    def get_query_weights(self, query_scores: np.ndarray):
+        wl = query_scores
+        query_weights = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1))) + 1  # min-max normalization w/ additive 1
+        query_weights = np.power(query_weights, 3)
+        query_weights = torch.tensor( 
+            query_weights
+        ).to(self.model.device) 
+        return query_weights
+
+
     def _add_training_data(self, dataset: Dataset, query_scores=None) -> None:
         """
         Adds the new data and label to the known data, but does not retrain the model.
@@ -84,10 +94,7 @@ class TorchActiveLearner(BaseLearner):
             self.train_dataset = ConcatDataset([self.train_dataset, dataset])
             
             if self.opt.use_weighted_loss:
-                wl = query_scores
-                query_weights = torch.tensor( 
-                    (wl - wl.min()) / (wl.max() - wl.min()) + 1 # min-max normalization w/ additive 1
-                ).to(self.model.device) 
+                query_weights = self.get_query_weights(query_scores)
                 self.acq_weights = torch.cat([self.acq_weights, query_weights])
         
         print(f"Updated Train Size: {len(self.train_dataset)}")
