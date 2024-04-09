@@ -40,8 +40,9 @@ def train(opt, model:Trainer, train_dataset: Dataset, query_weights: torch.Tenso
             model.total_steps += 1
 
             model.set_input(data)
-            
+
             if opt.use_weighted_loss:
+                assert query_weights is not None, "Error: weights for loss are of type None"
                 s_idx, e_idx = opt.batch_size * i, opt.batch_size * (i + 1) 
                 model.optimize_parameters(query_weights[s_idx:e_idx])
             else:
@@ -134,7 +135,7 @@ def active_learning_procedure(
         print(f"QUERY TIME: {(q_e_t - q_s_t):0.4f}s")
 
         # train model over new queried data
-        learner.teach(query_instance)
+        learner.teach(query_instance, query_scores)
 
         # remove queried data from pool
         remove_idxs = np.concatenate([np.where(pool_idxs == x)[0] for x in query_idxs])
