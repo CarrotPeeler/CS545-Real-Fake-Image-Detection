@@ -7,4 +7,8 @@ torch>=1.13.1+cu117
 modAL-python==0.4.2.1
 scipy
 scikit-learn
+scikit-image
 skorch==0.9.0
+tensorboardX
+ftfy
+regex
