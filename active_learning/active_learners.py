@@ -59,27 +59,29 @@ class TorchActiveLearner(BaseLearner):
 
         if train_dataset is not None and opt.use_weighted_loss:
             self.acq_weights = torch.ones(len(train_dataset)).to(model.device)
+            # map sample idx in dataset to corresponding weight idx in acq_weights
+            self.acq_weights_idx_map = {k:k for k in range(len(train_dataset))} 
         else:
             self.acq_weights = None
+            self.acq_weights_idx_map = None
 
         if train_dataset is not None:
             self._fit_to_known(bootstrap=bootstrap_init, **fit_kwargs)
 
     def train(self, dataset: Dataset):
-        self.train_func(self.opt, self.model, dataset, self.acq_weights)
+        self.train_func(self.opt, self.model, dataset, self.acq_weights, self.acq_weights_idx_map)
 
     def validate(self, dataset: Dataset):
         return self.val_func(self.opt, self.model, dataset)
 
     def get_query_weights(self, query_scores: np.ndarray):
         wl = query_scores
-        query_weights = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1))) + 1
-        # min-max normalization w/ additive 1
+        query_weights = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1))) + 1 # min-max normalization w/ additive 1
         query_weights = np.power(query_weights, 3)
         query_weights = torch.tensor(query_weights).to(self.model.device)
         return query_weights
 
-    def _add_training_data(self, dataset: Dataset, query_scores=None) -> None:
+    def _add_training_data(self, dataset: Dataset, query_scores=None, query_idxs=None) -> None:
         """
         Adds the new data and label to the known data,
         but does not retrain the model.
@@ -95,13 +97,26 @@ class TorchActiveLearner(BaseLearner):
         """
         if self.train_dataset is None:
             self.train_dataset = dataset
+
             if self.opt.use_weighted_loss:
                 self.acq_weights = torch.ones(len(dataset)).to(self.model.device)
+                self.acq_weights_idx_map = {k:k for k in range(len(dataset))}
         else:
             self.train_dataset = ConcatDataset([self.train_dataset, dataset])
+
             if self.opt.use_weighted_loss:
+                assert len(query_scores) == len(query_idxs)
+
                 query_weights = self.get_query_weights(query_scores)
                 self.acq_weights = torch.cat([self.acq_weights, query_weights])
+                # map corresponding weight idxs to their respective idx in self.acq_weights
+                for i in range(len(query_idxs)):
+                    # shift idxs by init dataset size to avoid idx collision
+                    dataset_idx = query_idxs[i] + (self.opt.num_samples_per_class * 2) 
+                    # compute corresponding weight idx in self.acq_weights
+                    acq_weights_idx = len(self.acq_weights) - len(query_scores) + i
+                    # store mapping
+                    self.acq_weights_idx_map[dataset_idx] = acq_weights_idx
 
         print(f"Updated Train Size: {len(self.train_dataset)}")
 
@@ -189,6 +204,7 @@ class TorchActiveLearner(BaseLearner):
         self,
         dataset: Dataset,
         query_scores=None,
+        query_idxs=None,
         bootstrap: bool = False,
         only_new: bool = False,
         **fit_kwargs,
@@ -211,7 +227,7 @@ class TorchActiveLearner(BaseLearner):
                 the fit method of the predictor.
         """
         if not only_new:
-            self._add_training_data(dataset, query_scores)
+            self._add_training_data(dataset, query_scores, query_idxs)
             self._fit_to_known(bootstrap=bootstrap, **fit_kwargs)
         else:
             self._fit_on_new(dataset, bootstrap=bootstrap, **fit_kwargs)

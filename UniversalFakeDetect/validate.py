@@ -78,7 +78,7 @@ def validate(model, loader, find_thres=False, gpu_id=0):
     with torch.no_grad():
         y_true, y_pred = [], []
         print("Length of dataset: %d" % (len(loader)))
-        for img, label in loader:
+        for img, label, idx in loader:
             in_tens = img.to(gpu_id)
 
             y_pred.extend(model(in_tens).sigmoid().flatten().tolist())

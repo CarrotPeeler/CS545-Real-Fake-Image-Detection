@@ -57,7 +57,7 @@ class Trainer(BaseModel):
         else:
             raise ValueError("optim should be [adam, sgd]")
 
-        self.loss_fn = DynamicWeightsBCE() if opt.use_weighted_loss else nn.BCEWithLogitsLoss()
+        self.loss_fn = DynamicWeightsBCE() if self.opt.use_active_learning and self.opt.use_weighted_loss else nn.BCEWithLogitsLoss()
 
         # set current device and transfer model to it
         if len(opt.gpu_ids) > 1:
@@ -101,7 +101,7 @@ class Trainer(BaseModel):
 
     def optimize_parameters(self, weights: torch.Tensor = None):
         self.forward()
-        if self.opt.use_weighted_loss:
+        if self.opt.use_active_learning and self.opt.use_weighted_loss:
             assert weights is not None, "Error: given type None as weights"
             self.loss = self.loss_fn(self.output.squeeze(1), self.label, weights)
         else:

@@ -45,7 +45,11 @@ class RealFakeDataset(Dataset):
         rand.seed(opt.seed)
         assert opt.data_label in ["train", "val"]
         # assert opt.data_mode in ["ours", "wang2020", "ours_wang2020"]
+        self.opt = opt
         self.data_label = opt.data_label
+        self.al_mode = al_mode
+        self.init_idxs = init_idxs
+
         if opt.data_mode == "ours":
             pickle_name = "train.pickle" if opt.data_label == "train" else "val.pickle"
             real_list = get_list(os.path.join(opt.real_list_path, pickle_name))
@@ -188,8 +192,11 @@ class RealFakeDataset(Dataset):
         img_path = self.total_list[idx]
         label = self.labels_dict[img_path]
         img = Image.open(img_path).convert("RGB")
-        img = self.transform(img)
-        return img, label
+        img = self.transform(img) 
+        # shift all pool sample idxs by the size of the init dataset; prevents idx collision for dataset concatenation
+        if self.opt.use_active_learning and self.al_mode == "pool":
+            idx += len(self.init_idxs) * 2
+        return img, label, idx
 
 
 class DataAugment(torch.nn.Module):
