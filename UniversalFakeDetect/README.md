@@ -22,9 +22,9 @@ CVPR 2023
 - [Training](#training)
 
 
-## Setup 
+## Setup
 
-1. Clone this repository 
+1. Clone this repository
 ```bash
 git clone https://github.com/Yuheng-Li/UniversalFakeDetect
 cd UniversalFakeDetect
@@ -43,13 +43,13 @@ pip install torch torchvision
 ```
 
 datasets
-└── test					
-      ├── progan	
-      │── cyclegan   	
+└── test
+      ├── progan
+      │── cyclegan
       │── biggan
       │      .
       │      .
-	  
+
 ```
 - Each directory (e.g., progan) will contain real/fake images under `0_real` and `1_fake` folders respectively.
 - Dataset for the diffusion models (e.g., LDM/Glide) can be found [here](https://drive.google.com/file/d/1FXlGIRh_Ud3cScMgSVDbEWmPDmjcrm1t/view?usp=drive_link). Note that in the paper (Table 2/3), we had reported the results over 10k randomly sampled images. Since providing that many images for all the domains will take up too much space, we are only releasing 1k images for each domain; i.e., 1k images fake images and 1k real images for each domain (e.g., LDM-200).
@@ -57,7 +57,7 @@ datasets
 
 
 ## Evaluation
- 
+
 - You can evaluate the model on all the dataset at once by running:
 ```bash
 python3 UniversalFakeDetect/validate.py --arch=CLIP:ViT-L/14 --ckpt=pretrained_weights/fc_weights.pth --result_folder=results/clip_vitl14 --gpu_id=0
@@ -65,7 +65,7 @@ python3 UniversalFakeDetect/validate.py --arch=CLIP:ViT-L/14 --ckpt=pretrained_w
 
 - You can also evaluate the model on one generative model by specifying the paths of real and fake datasets
 ```bash
-python UniversalFakeDetect/validate.py  --arch=CLIP:ViT-L/14   --ckpt=pretrained_weights/fc_weights.pth   --result_folder=clip_vitl14  --real_path datasets/test/progan/0_real --fake_path datasets/test/progan/1_fake 
+python UniversalFakeDetect/validate.py  --arch=CLIP:ViT-L/14   --ckpt=pretrained_weights/fc_weights.pth   --result_folder=clip_vitl14  --real_path datasets/test/progan/0_real --fake_path datasets/test/progan/1_fake
 ```
 
 Note that if no arguments are provided for `real_path` and `fake_path`, the script will perform the evaluation on all the domains specified in `dataset_paths.py`.
@@ -74,13 +74,13 @@ Note that if no arguments are provided for `real_path` and `fake_path`, the scri
 
 ## Training
 
-- Our main model is trained on the same dataset used by the authors of [this work](https://arxiv.org/abs/1912.11035). Download the official training dataset provided [here](https://drive.google.com/file/d/1iVNBV0glknyTYGA9bCxT_d0CVTOgGcKh/view) (dataset size ~ 72GB). 
+- Our main model is trained on the same dataset used by the authors of [this work](https://arxiv.org/abs/1912.11035). Download the official training dataset provided [here](https://drive.google.com/file/d/1iVNBV0glknyTYGA9bCxT_d0CVTOgGcKh/view) (dataset size ~ 72GB).
 
 - Download and unzip the dataset in `datasets/train` directory. The overall structure should look like the following:
 ```
 datasets
-└── train			
-      └── progan			
+└── train
+      └── progan
            ├── airplane
            │── bird
            │── boat
@@ -90,7 +90,7 @@ datasets
 - A total of 20 different object categories, with each folder containing the corresponding real and fake images in `0_real` and `1_fake` folders.
 - The model can then be trained with the following command:
 ```bash
-python3 UniversalFakeDetect/train.py --name=clip_vitl14 --wang2020_data_path=/home/vislab-001/Jared/dip/CS545-Real-Fake-Image-Detection/sentry-dataset/ --data_mode=dip  --arch=CLIP:ViT-L/14  --fix_backbone --save_epoch_freq=5 --gpu_ids=0,1 --num_threads=4 --batch_size=512 
+python3 UniversalFakeDetect/train.py --name=clip_vitl14 --wang2020_data_path=/home/vislab-001/Jared/dip/CS545-Real-Fake-Image-Detection/sentry-dataset/ --data_mode=dip  --arch=CLIP:ViT-L/14  --fix_backbone --save_epoch_freq=5 --gpu_ids=0,1 --num_threads=4 --batch_size=512
 ```
 - Fine-tuning with pretrained weights
 ```bash
@@ -107,7 +107,7 @@ We would like to thank [Sheng-Yu Wang](https://github.com/PeterWang512) for rele
 If you find our work helpful in your research, please cite it using the following:
 ```bibtex
 @inproceedings{ojha2023fakedetect,
-      title={Towards Universal Fake Image Detectors that Generalize Across Generative Models}, 
+      title={Towards Universal Fake Image Detectors that Generalize Across Generative Models},
       author={Ojha, Utkarsh and Li, Yuheng and Lee, Yong Jae},
       booktitle={CVPR},
       year={2023},

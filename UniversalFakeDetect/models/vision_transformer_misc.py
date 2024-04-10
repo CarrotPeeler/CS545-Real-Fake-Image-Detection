@@ -5,7 +5,6 @@ from torch import Tensor
 
 from .vision_transformer_utils import _log_api_usage_once
 
-
 interpolate = torch.nn.functional.interpolate
 
 

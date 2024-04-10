@@ -1,15 +1,21 @@
 # Modified from: https://github.com/lunayht/DBALwithImgData
-# Changed implementation to handle torch.utils.data.DataLoader class instead of Numpy array and binary classification
+# Changed implementation to handle torch.utils.data.DataLoader
+# class instead of Numpy array and binary classification
 
-import torch
 import numpy as np
+import torch
 from scipy import stats
-from tqdm.auto import tqdm
 from torch.utils.data import Dataset, Subset
 
 
 def predictions_from_pool(
-    learner, X_pool: Dataset, opt, pool_idxs:np.ndarray, T: int = 100, subsample_size=10000, training: bool = True
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    T: int = 100,
+    subsample_size=10000,
+    training: bool = True,
 ):
     """Run random_subset prediction on model and return the output
 
@@ -23,11 +29,7 @@ def predictions_from_pool(
     with torch.no_grad():
         outputs = np.stack(
             [
-                torch.sigmoid(
-                    learner.forward(subset, training=training)
-                )
-                .cpu()
-                .numpy()
+                torch.sigmoid(learner.forward(subset, training=training)).cpu().numpy()
                 for _ in range(T)
             ]
         )
@@ -36,14 +38,14 @@ def predictions_from_pool(
 
 
 def uniform(
-    learner, 
-    X_pool: Dataset, 
-    opt, 
-    pool_idxs:np.ndarray, 
-    n_query: int = 10, 
-    T: int = 100, 
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    n_query: int = 10,
+    T: int = 100,
     subsample_size=10000,
-    training: bool = True
+    training: bool = True,
 ):
     """Baseline acquisition a(x) = unif() with unif() a function
     returning a draw from a uniform distribution over the interval [0,1].
@@ -61,14 +63,14 @@ def uniform(
 
 
 def shannon_entropy_function(
-    learner, 
-    X_pool: Dataset, 
-    opt, 
-    pool_idxs:np.ndarray, 
-    T: int = 100, 
-    E_H: bool = False, 
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    T: int = 100,
+    E_H: bool = False,
     subsample_size=10000,
-    training: bool = True 
+    training: bool = True,
 ):
     """H[y|x,D_train] := - sum_{c} p(y=c|x,D_train)log p(y=c|x,D_train)
 
@@ -79,27 +81,31 @@ def shannon_entropy_function(
         E_H: If True, compute H and EH for BALD (default: False),
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset = predictions_from_pool(learner, X_pool, opt, pool_idxs, T, subsample_size, training=training)
+    outputs, random_subset = predictions_from_pool(
+        learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
+    )
     pc = outputs.mean(axis=0)
     # Binary Shannon Entropy
-    H = (-pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)) # To avoid division with zero, add 1e-10
+    H = -pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)
+    # To avoid division with zero, add 1e-10
     if E_H:
-        # Binary Model Entropy 
-        E = -np.mean(outputs * np.log(outputs + 1e-10) + 
-                       (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0)
+        # Binary Model Entropy
+        E = -np.mean(
+            outputs * np.log(outputs + 1e-10) + (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0
+        )
         return H, E, random_subset
     return H, random_subset
 
 
 def max_entropy(
-    learner, 
-    X_pool: Dataset, 
-    opt, 
-    pool_idxs:np.ndarray, 
-    n_query: int = 10, 
-    T: int = 100, 
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    n_query: int = 10,
+    T: int = 100,
     subsample_size=10000,
-    training: bool = True
+    training: bool = True,
 ):
     """Choose pool points that maximise the predictive entropy.
     Using Shannon entropy function.
@@ -114,22 +120,25 @@ def max_entropy(
     acquisition, random_subset = shannon_entropy_function(
         learner, X_pool, opt, pool_idxs, T, subsample_size=subsample_size, training=training
     )
-    idx = (-acquisition).argsort()[:n_query] # retrieve n highest entropy sample idxs
+    idx = (-acquisition).argsort()[:n_query]
+    # retrieve n highest entropy sample idxs
     query_scores = acquisition[idx]
-    query_idx = random_subset[idx] # fetch pool idxs that correspond to the n sample idxs from the random subset
+    # fetch pool idxs that correspond to the
+    # n sample idxs from the random subset
+    query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
     return query_idx, subset, query_scores
 
 
 def bald(
-    learner, 
+    learner,
     X_pool: Dataset,
-    opt, 
-    pool_idxs:np.ndarray, 
-    n_query: int = 10, 
-    T: int = 100, 
+    opt,
+    pool_idxs: np.ndarray,
+    n_query: int = 10,
+    T: int = 100,
     subsample_size=10000,
-    training: bool = True
+    training: bool = True,
 ):
     """Choose pool points that are expected to maximise the information
     gained about the model parameters, i.e. maximise the mutal information
@@ -149,7 +158,14 @@ def bald(
         training: If False, run test without MC dropout. (default=True)
     """
     H, E_H, random_subset = shannon_entropy_function(
-        learner, X_pool, opt, pool_idxs, T, E_H=True, subsample_size=subsample_size, training=training
+        learner,
+        X_pool,
+        opt,
+        pool_idxs,
+        T,
+        E_H=True,
+        subsample_size=subsample_size,
+        training=training,
     )
     acquisition = H - E_H
     idx = (-acquisition).argsort()[:n_query]
@@ -160,14 +176,14 @@ def bald(
 
 
 def var_ratios(
-    learner, 
-    X_pool: Dataset, 
-    opt, 
-    pool_idxs:np.ndarray, 
-    n_query: int = 10, 
-    T: int = 100, 
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    n_query: int = 10,
+    T: int = 100,
     subsample_size=10000,
-    training: bool = True
+    training: bool = True,
 ):
     """Like Max Entropy but Variational Ratios measures lack of confidence.
     Given: variational_ratio[x] := 1 - max_{y} p(y|x,D_{train})
@@ -179,9 +195,11 @@ def var_ratios(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset = predictions_from_pool(learner, X_pool, opt, pool_idxs, T, subsample_size, training)
+    outputs, random_subset = predictions_from_pool(
+        learner, X_pool, opt, pool_idxs, T, subsample_size, training
+    )
     # get binary preds
-    preds = (outputs[:, :] > 0.5).astype('uint8')
+    preds = (outputs[:, :] > 0.5).astype("uint8")
     _, count = stats.mode(preds, axis=0, keepdims=False)
     acquisition = (1 - count / T).reshape((-1,))
     idx = (-acquisition).argsort()[:n_query]
@@ -192,14 +210,14 @@ def var_ratios(
 
 
 def mean_std(
-    learner, 
-    X_pool: Dataset, 
-    opt, 
-    pool_idxs:np.ndarray, 
-    n_query: int = 10, 
-    T: int = 100, 
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    n_query: int = 10,
+    T: int = 100,
     subsample_size=10000,
-    training: bool = True
+    training: bool = True,
 ):
     """Maximise mean standard deviation
     Given: sigma_c = sqrt(E_{q(w)}[p(y=c|x,w)^2]-E_{q(w)}[p(y=c|x,w)]^2)
@@ -211,7 +229,9 @@ def mean_std(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset = predictions_from_pool(learner, X_pool, opt, pool_idxs, T, subsample_size, training)
+    outputs, random_subset = predictions_from_pool(
+        learner, X_pool, opt, pool_idxs, T, subsample_size, training
+    )
     outputs_pos = outputs
     outputs_neg = 1 - outputs_pos
 

@@ -1,8 +1,9 @@
+from typing import Optional
 
 import torch.nn.functional as F
 from torch import Tensor
 from torch.nn.modules.loss import _Loss
-from typing import Optional
+
 
 class BCEWithLogitsLoss(_Loss):
     r"""This loss combines a `Sigmoid` layer and the `BCELoss` in one single
@@ -37,15 +38,22 @@ class BCEWithLogitsLoss(_Loss):
         - Output: scalar. If :attr:`reduction` is ``'none'``, then :math:`(*)`, same
           shape as input.
     """
-    def __init__(self, weight: Optional[Tensor] = None, size_average=None, reduce=None, reduction: str = 'mean',
-                 pos_weight: Optional[Tensor] = None) -> None:
+
+    def __init__(
+        self,
+        weight: Optional[Tensor] = None,
+        size_average=None,
+        reduce=None,
+        reduction: str = "mean",
+        pos_weight: Optional[Tensor] = None,
+    ) -> None:
         super(BCEWithLogitsLoss, self).__init__(size_average, reduce, reduction)
-        self.register_buffer('weight', weight)
-        self.register_buffer('pos_weight', pos_weight)
+        self.register_buffer("weight", weight)
+        self.register_buffer("pos_weight", pos_weight)
         self.weight: Optional[Tensor]
         self.pos_weight: Optional[Tensor]
 
     def forward(self, input: Tensor, target: Tensor, weight: Tensor) -> Tensor:
-        return F.binary_cross_entropy_with_logits(input, target, weight,
-                                                  pos_weight=self.pos_weight,
-                                                  reduction=self.reduction)
+        return F.binary_cross_entropy_with_logits(
+            input, target, weight, pos_weight=self.pos_weight, reduction=self.reduction
+        )
