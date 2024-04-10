@@ -53,7 +53,21 @@ The models currently available are listed below. The names listed can be directl
 - CLIP:RN101
 - CLIP:ViT-L/14
 
+
 ## Training the Models
+Run the `train_normal.sh` script for normal training without Active Learning. Edit the arguments in the script to change the model and adjust training hyperparameters. 
+```bash
+bash UniversalFakeDetect/train_normal.sh
+```
+
+To run training with Active Learning:
+```bash
+bash UniversalFakeDetect/train_active_learning.sh
+```
 
 
 ## Performing Inference
+Run the following to perform inference for non Active Learning checkpoints. Make sure to edit the path arguments for the checkpoint file and the save directory. 
+```bash
+bash UniversalFakeDetect/test.sh
+```
