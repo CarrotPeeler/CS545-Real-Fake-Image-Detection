@@ -17,20 +17,20 @@ cd CS545-Real-Fake-Image-Detection
 ```
 Run the following script to download, compress, and generate the subset of fake images and metadata used from Sentry.
 
-Note: for each dataset in sentry, the respective tar files are downloaded together, extracted, and then deleted to save space. Meaning, you will at most need ~100 GBs to handle the intermediate downloading process. The final compressed subset is only ~18 GBs. 
+Note: for each dataset in sentry, the respective tar files are downloaded together, extracted, and then deleted to save space. Meaning, you will at most need ~100 GBs to handle the intermediate downloading process. The final compressed subset is only ~18 GBs.
 ```bash
 python3 datagen/make_sentry_subset.py < /dev/null > log.txt 2>&1 &
 ```
-For real image data, we use CC3M (Google Conceptual Captions), FFHQ, and AFHQv2 for training, and CC3M and CelebA-HQ for testing. 
+For real image data, we use CC3M (Google Conceptual Captions), FFHQ, and AFHQv2 for training, and CC3M and CelebA-HQ for testing.
 
-For CC3M, we use 155k of the train images and all of the val images. 
+For CC3M, we use 155k of the train images and all of the val images.
 
 Run the following script to download all real data components:
 ```bash
 python3 datagen/cc3m/add_real_data.py < /dev/null > log.txt 2>&1 &
 ```
 
-After downloading the data, there should be 482k train images and 187k validation images. 
+After downloading the data, there should be 482k train images and 187k validation images.
 
 
 ## Active Learning
@@ -55,7 +55,7 @@ The models currently available are listed below. The names listed can be directl
 
 
 ## Training the Models
-Run the `train_normal.sh` script for normal training without Active Learning. Edit the arguments in the script to change the model and adjust training hyperparameters. 
+Run the `train_normal.sh` script for normal training without Active Learning. Edit the arguments in the script to change the model and adjust training hyperparameters.
 ```bash
 bash UniversalFakeDetect/train_normal.sh
 ```
@@ -67,7 +67,7 @@ bash UniversalFakeDetect/train_active_learning.sh
 
 
 ## Performing Inference
-Run the following to perform inference for non Active Learning checkpoints. Make sure to edit the path arguments for the checkpoint file and the save directory. 
+Run the following to perform inference for non Active Learning checkpoints. Make sure to edit the path arguments for the checkpoint file and the save directory.
 ```bash
 bash UniversalFakeDetect/test.sh
 ```

@@ -1,7 +1,8 @@
-import os
 import argparse
+import os
 import shutil
 from glob import glob
+
 from img2dataset import download
 from make_sentry_subset import batch_convert_png_jpg, generate_metadata
 
@@ -12,9 +13,8 @@ def download_cc3m(local_dataset_path):
     cc3m_train_dir = f"{local_dataset_path}/ImageData/train/cc3m"
     cc3m_val_dir = f"{local_dataset_path}/ImageData/val/cc3m"
 
-    for split in [(cc3m_train_anno, cc3m_train_dir), 
-                  (cc3m_val_anno, cc3m_val_dir)]:
-        os.makedirs(split[1], exist_ok=True) 
+    for split in [(cc3m_train_anno, cc3m_train_dir), (cc3m_val_anno, cc3m_val_dir)]:
+        os.makedirs(split[1], exist_ok=True)
         download(
             processes_count=args.num_cores,
             thread_count=args.total_threads,
@@ -52,10 +52,12 @@ def download_cc3m(local_dataset_path):
 def download_ffhq(local_dataset_path):
     dir_path = f"{local_dataset_path}/ImageData/train/ffhq"
     dir_path_tmp = f"{dir_path}-temp"
-    os.makedirs(dir_path, exist_ok=True) 
-    os.makedirs(dir_path_tmp, exist_ok=True) 
-    os.system(f"kaggle datasets download -d denislukovnikov/ffhq256-images-only -p {dir_path_tmp} \
-              && unzip -j {dir_path_tmp}/ffhq256-images-only.zip -d {dir_path_tmp}")
+    os.makedirs(dir_path, exist_ok=True)
+    os.makedirs(dir_path_tmp, exist_ok=True)
+    os.system(
+        f"kaggle datasets download -d denislukovnikov/ffhq256-images-only -p {dir_path_tmp} \
+              && unzip -j {dir_path_tmp}/ffhq256-images-only.zip -d {dir_path_tmp}"
+    )
     os.remove(f"{dir_path_tmp}/ffhq256-images-only.zip")
 
     png_paths = glob(f"{dir_path_tmp}/*.png")
@@ -67,10 +69,12 @@ def download_ffhq(local_dataset_path):
 def download_afhq_v2(local_dataset_path):
     dir_path = f"{local_dataset_path}/ImageData/train/afhq-v2"
     dir_path_tmp = f"{dir_path}-temp"
-    os.makedirs(dir_path, exist_ok=True) 
-    os.makedirs(dir_path_tmp, exist_ok=True) 
-    os.system(f"wget -N https://www.dropbox.com/s/vkzjokiwof5h8w6/afhq_v2.zip?dl=0 -O {dir_path_tmp}/afhq-v2.zip \
-              && unzip -j {dir_path_tmp}/afhq-v2.zip -d {dir_path_tmp}")
+    os.makedirs(dir_path, exist_ok=True)
+    os.makedirs(dir_path_tmp, exist_ok=True)
+    os.system(
+        f"wget -N https://www.dropbox.com/s/vkzjokiwof5h8w6/afhq_v2.zip?dl=0 -O {dir_path_tmp}/afhq-v2.zip \
+              && unzip -j {dir_path_tmp}/afhq-v2.zip -d {dir_path_tmp}"
+    )
     os.remove(f"{dir_path_tmp}/afhq-v2.zip")
 
     png_paths = glob(f"{dir_path_tmp}/*.png")
@@ -81,9 +85,11 @@ def download_afhq_v2(local_dataset_path):
 
 def download_celeba_hq(local_dataset_path):
     dir_path = f"{local_dataset_path}/ImageData/val/celeba-hq"
-    os.makedirs(dir_path, exist_ok=True) 
-    os.system(f"kaggle datasets download -d badasstechie/celebahq-resized-256x256 -p {dir_path} \
-              && unzip -j {dir_path}/celebahq-resized-256x256.zip -d {dir_path}")
+    os.makedirs(dir_path, exist_ok=True)
+    os.system(
+        f"kaggle datasets download -d badasstechie/celebahq-resized-256x256 -p {dir_path} \
+              && unzip -j {dir_path}/celebahq-resized-256x256.zip -d {dir_path}"
+    )
     os.remove(f"{dir_path}/celebahq-resized-256x256.zip")
     jpg_paths = glob(f"{dir_path}/*.jpg")
     return jpg_paths
@@ -91,12 +97,18 @@ def download_celeba_hq(local_dataset_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--num_cores", type=int, default=10, 
-                        help="number of cpu cores your system has")
-    parser.add_argument("--total_threads", type=int, default=20, 
-                        help="number of cpu threads total")
-    parser.add_argument("--local_dataset_path", type=str, default="./sentry-dataset",
-                        help="path to where sentry-dataset is located")
+    parser.add_argument(
+        "--num_cores", type=int, default=10, help="number of cpu cores your system has"
+    )
+    parser.add_argument(
+        "--total_threads", type=int, default=20, help="number of cpu threads total"
+    )
+    parser.add_argument(
+        "--local_dataset_path",
+        type=str,
+        default="./sentry-dataset",
+        help="path to where sentry-dataset is located",
+    )
     args = parser.parse_args()
 
     jpg_paths_by_source = {}
@@ -111,7 +123,3 @@ if __name__ == "__main__":
 
     # generate metadata
     generate_metadata(jpg_paths_by_source, args.local_dataset_path, label=1)
-
-
-
-    
