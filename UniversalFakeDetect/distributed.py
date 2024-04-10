@@ -9,14 +9,37 @@ import pickle
 import torch
 import torch.distributed as dist
 
-from pytorchvideo.layers.distributed import (  # noqa
-    cat_all_gather,
-    get_local_process_group,
-    get_local_rank,
-    get_local_size,
-    get_world_size,
-    init_distributed_training as _init_distributed_training,
-)
+_LOCAL_PROCESS_GROUP = None
+
+
+def get_world_size() -> int:
+    """
+    Simple wrapper for correctly getting worldsize in both distributed
+    / non-distributed settings
+    """
+    return (
+        torch.distributed.get_world_size()
+        if torch.distributed.is_available() and torch.distributed.is_initialized()
+        else 1
+    )
+
+
+def _init_distributed_training(num_gpus, shard_id):
+    """
+    Initialize variables needed for distributed training.
+    """
+    if num_gpus <= 1:
+        return
+    num_gpus_per_machine = num_gpus
+    num_machines = dist.get_world_size() // num_gpus_per_machine
+    for i in range(num_machines):
+        ranks_on_i = list(
+            range(i * num_gpus_per_machine, (i + 1) * num_gpus_per_machine)
+        )
+        pg = dist.new_group(ranks_on_i)
+        if i == shard_id:
+            global _LOCAL_PROCESS_GROUP
+            _LOCAL_PROCESS_GROUP = pg
 
 
 def init_distributed_training(num_gpus, shard_id):

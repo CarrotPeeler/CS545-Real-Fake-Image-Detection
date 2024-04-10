@@ -2,7 +2,8 @@ import functools
 import torch
 import torch.nn as nn
 from networks.base_model import BaseModel, init_weights
-import sys
+import sys, os
+sys.path.append(os.path.abspath(os.path.join('..','CS545-Real-Fake-Image-Detection')))
 from models import get_model
 from active_learning.active_learning_loss import BCEWithLogitsLoss as DynamicWeightsBCE
 

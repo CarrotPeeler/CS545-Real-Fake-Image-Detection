@@ -12,3 +12,4 @@ skorch==0.9.0
 tensorboardX
 ftfy
 regex
+pytorchvideo
