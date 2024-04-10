@@ -17,7 +17,11 @@ from UniversalFakeDetect.networks.trainer import Trainer
 from UniversalFakeDetect.validate import validate as val
 
 
-def train(opt, model: Trainer, train_dataset: Dataset, query_weights: torch.Tensor = None):
+def train(opt, 
+          model: Trainer, 
+          train_dataset: Dataset, 
+          weights: torch.Tensor = None,
+          weights_idx_map: Dict = None):
     """Generic PyTorch train function"""
 
     train_loader = create_dataloader(opt, premade_dataset=train_dataset)
@@ -41,12 +45,17 @@ def train(opt, model: Trainer, train_dataset: Dataset, query_weights: torch.Tens
         for i, data in enumerate(train_loader):
             model.total_steps += 1
 
-            model.set_input(data)
+            model.set_input(data[:2]) # [imgs, labels]
+            # print(f"INDICES: {data[2]}")
 
             if opt.use_weighted_loss:
-                assert query_weights is not None, "Error: weights for loss are of type None"
-                s_idx, e_idx = opt.batch_size * i, opt.batch_size * (i + 1)
-                model.optimize_parameters(query_weights[s_idx:e_idx])
+                assert weights is not None, "Error: weights for loss are of type None"
+                assert weights_idx_map is not None, "Error: weights_idx_map is of type None"
+
+                weights_idxs = list(map(lambda x:weights_idx_map[x.item()], data[2]))
+                # s_idx, e_idx = opt.batch_size * i, opt.batch_size * (i + 1)
+                # print(f"{s_idx} to {e_idx}\nWeights: {weights[weights_idxs]}")
+                model.optimize_parameters(weights[weights_idxs])
             else:
                 model.optimize_parameters()
 
@@ -109,6 +118,8 @@ def active_learning_procedure(
         train_func=train,
         val_func=validate,
     )
+    
+    # track already queried idxs
     pool_idxs = np.array(range(len(pool_dataset)))
 
     v_s_t = time.time()
@@ -140,8 +151,7 @@ def active_learning_procedure(
         print(f"QUERY TIME: {(q_e_t - q_s_t):0.4f}s")
 
         # train model over new queried data
-        learner.teach(query_instance, query_scores)
-        print(query_scores[:50])
+        learner.teach(query_instance, query_scores, query_idxs)
 
         # remove queried data from pool
         remove_idxs = np.concatenate([np.where(pool_idxs == x)[0] for x in query_idxs])
