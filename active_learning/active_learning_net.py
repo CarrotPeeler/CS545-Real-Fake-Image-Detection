@@ -141,6 +141,7 @@ def active_learning_procedure(
 
         # train model over new queried data
         learner.teach(query_instance, query_scores)
+        print(query_scores[:50])
 
         # remove queried data from pool
         remove_idxs = np.concatenate([np.where(pool_idxs == x)[0] for x in query_idxs])
