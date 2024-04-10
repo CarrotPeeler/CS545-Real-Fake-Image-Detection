@@ -73,7 +73,9 @@ class EncoderBlock(nn.Module):
 
         # Attention block
         self.ln_1 = norm_layer(hidden_dim)
-        self.self_attention = nn.MultiheadAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
+        self.self_attention = nn.MultiheadAttention(
+            hidden_dim, num_heads, dropout=attention_dropout, batch_first=True
+        )
         self.dropout = nn.Dropout(dropout)
 
         # MLP block
@@ -81,7 +83,9 @@ class EncoderBlock(nn.Module):
         self.mlp = MLPBlock(hidden_dim, mlp_dim, dropout)
 
     def forward(self, input: torch.Tensor):
-        torch._assert(input.dim() == 3, f"Expected (seq_length, batch_size, hidden_dim) got {input.shape}")
+        torch._assert(
+            input.dim() == 3, f"Expected (seq_length, batch_size, hidden_dim) got {input.shape}"
+        )
         x = self.ln_1(input)
         x, _ = self.self_attention(query=x, key=x, value=x, need_weights=False)
         x = self.dropout(x)
@@ -109,7 +113,9 @@ class Encoder(nn.Module):
         super().__init__()
         # Note that batch_size is on the first dim because
         # we have batch_first=True in nn.MultiAttention() by default
-        self.pos_embedding = nn.Parameter(torch.empty(1, seq_length, hidden_dim).normal_(std=0.02))  # from BERT
+        self.pos_embedding = nn.Parameter(
+            torch.empty(1, seq_length, hidden_dim).normal_(std=0.02)
+        )  # from BERT
         self.dropout = nn.Dropout(dropout)
         layers: OrderedDict[str, nn.Module] = OrderedDict()
         for i in range(num_layers):
@@ -125,7 +131,9 @@ class Encoder(nn.Module):
         self.ln = norm_layer(hidden_dim)
 
     def forward(self, input: torch.Tensor):
-        torch._assert(input.dim() == 3, f"Expected (batch_size, seq_length, hidden_dim) got {input.shape}")
+        torch._assert(
+            input.dim() == 3, f"Expected (batch_size, seq_length, hidden_dim) got {input.shape}"
+        )
         input = input + self.pos_embedding
         return self.ln(self.layers(self.dropout(input)))
 
@@ -179,7 +187,8 @@ class VisionTransformer(nn.Module):
                 )
                 prev_channels = conv_stem_layer_config.out_channels
             seq_proj.add_module(
-                "conv_last", nn.Conv2d(in_channels=prev_channels, out_channels=hidden_dim, kernel_size=1)
+                "conv_last",
+                nn.Conv2d(in_channels=prev_channels, out_channels=hidden_dim, kernel_size=1),
             )
             self.conv_proj: nn.Module = seq_proj
         else:
@@ -217,14 +226,22 @@ class VisionTransformer(nn.Module):
 
         if isinstance(self.conv_proj, nn.Conv2d):
             # Init the patchify stem
-            fan_in = self.conv_proj.in_channels * self.conv_proj.kernel_size[0] * self.conv_proj.kernel_size[1]
+            fan_in = (
+                self.conv_proj.in_channels
+                * self.conv_proj.kernel_size[0]
+                * self.conv_proj.kernel_size[1]
+            )
             nn.init.trunc_normal_(self.conv_proj.weight, std=math.sqrt(1 / fan_in))
             if self.conv_proj.bias is not None:
                 nn.init.zeros_(self.conv_proj.bias)
-        elif self.conv_proj.conv_last is not None and isinstance(self.conv_proj.conv_last, nn.Conv2d):
+        elif self.conv_proj.conv_last is not None and isinstance(
+            self.conv_proj.conv_last, nn.Conv2d
+        ):
             # Init the last 1x1 conv of the conv stem
             nn.init.normal_(
-                self.conv_proj.conv_last.weight, mean=0.0, std=math.sqrt(2.0 / self.conv_proj.conv_last.out_channels)
+                self.conv_proj.conv_last.weight,
+                mean=0.0,
+                std=math.sqrt(2.0 / self.conv_proj.conv_last.out_channels),
             )
             if self.conv_proj.conv_last.bias is not None:
                 nn.init.zeros_(self.conv_proj.conv_last.bias)
@@ -270,18 +287,17 @@ class VisionTransformer(nn.Module):
         batch_class_token = self.class_token.expand(n, -1, -1)
         x = torch.cat([batch_class_token, x], dim=1)
 
-        
         x = self.encoder(x)
-        img_feature = x[:,1:]
+        img_feature = x[:, 1:]
         H = W = int(self.image_size / self.patch_size)
-        out['f4'] = img_feature.view(n, H, W, self.hidden_dim).permute(0,3,1,2)
+        out["f4"] = img_feature.view(n, H, W, self.hidden_dim).permute(0, 3, 1, 2)
 
         # Classifier "token" as used by standard language architectures
         x = x[:, 0]
-        out['penultimate'] = x 
+        out["penultimate"] = x
 
-        x = self.heads(x) # I checked that for all pretrained ViT, this is just a fc 
-        out['logits'] = x 
+        x = self.heads(x)  # I checked that for all pretrained ViT, this is just a fc
+        out["logits"] = x
 
         return out
 
@@ -447,7 +463,9 @@ def interpolate_embeddings(
         # (1, seq_length, hidden_dim) -> (1, hidden_dim, seq_length)
         pos_embedding_img = pos_embedding_img.permute(0, 2, 1)
         seq_length_1d = int(math.sqrt(seq_length))
-        torch._assert(seq_length_1d * seq_length_1d == seq_length, "seq_length is not a perfect square!")
+        torch._assert(
+            seq_length_1d * seq_length_1d == seq_length, "seq_length is not a perfect square!"
+        )
 
         # (1, hidden_dim, seq_length) -> (1, hidden_dim, seq_l_1d, seq_l_1d)
         pos_embedding_img = pos_embedding_img.reshape(1, hidden_dim, seq_length_1d, seq_length_1d)

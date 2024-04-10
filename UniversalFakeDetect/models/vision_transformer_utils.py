@@ -56,7 +56,10 @@ def make_grid(
     """
     if not torch.jit.is_scripting() and not torch.jit.is_tracing():
         _log_api_usage_once(make_grid)
-    if not (torch.is_tensor(tensor) or (isinstance(tensor, list) and all(torch.is_tensor(t) for t in tensor))):
+    if not (
+        torch.is_tensor(tensor)
+        or (isinstance(tensor, list) and all(torch.is_tensor(t) for t in tensor))
+    ):
         raise TypeError(f"tensor or list of tensors expected, got {type(tensor)}")
 
     if "range" in kwargs.keys():
@@ -113,7 +116,9 @@ def make_grid(
     ymaps = int(math.ceil(float(nmaps) / xmaps))
     height, width = int(tensor.size(2) + padding), int(tensor.size(3) + padding)
     num_channels = tensor.size(1)
-    grid = tensor.new_full((num_channels, height * ymaps + padding, width * xmaps + padding), pad_value)
+    grid = tensor.new_full(
+        (num_channels, height * ymaps + padding, width * xmaps + padding), pad_value
+    )
     k = 0
     for y in range(ymaps):
         for x in range(xmaps):
@@ -123,7 +128,9 @@ def make_grid(
             # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.copy_
             grid.narrow(1, y * height + padding, height - padding).narrow(  # type: ignore[attr-defined]
                 2, x * width + padding, width - padding
-            ).copy_(tensor[k])
+            ).copy_(
+                tensor[k]
+            )
             k = k + 1
     return grid
 
@@ -161,7 +168,9 @@ def draw_bounding_boxes(
     image: torch.Tensor,
     boxes: torch.Tensor,
     labels: Optional[List[str]] = None,
-    colors: Optional[Union[List[Union[str, Tuple[int, int, int]]], str, Tuple[int, int, int]]] = None,
+    colors: Optional[
+        Union[List[Union[str, Tuple[int, int, int]]], str, Tuple[int, int, int]]
+    ] = None,
     fill: Optional[bool] = False,
     width: int = 1,
     font: Optional[str] = None,
@@ -218,7 +227,9 @@ def draw_bounding_boxes(
         colors = _generate_color_palette(num_boxes)
     elif isinstance(colors, list):
         if len(colors) < num_boxes:
-            raise ValueError(f"Number of colors ({len(colors)}) is less than number of boxes ({num_boxes}). ")
+            raise ValueError(
+                f"Number of colors ({len(colors)}) is less than number of boxes ({num_boxes}). "
+            )
     else:  # colors specifies a single color for all boxes
         colors = [colors] * num_boxes
 
@@ -237,7 +248,9 @@ def draw_bounding_boxes(
     else:
         draw = ImageDraw.Draw(img_to_draw)
 
-    txt_font = ImageFont.load_default() if font is None else ImageFont.truetype(font=font, size=font_size)
+    txt_font = (
+        ImageFont.load_default() if font is None else ImageFont.truetype(font=font, size=font_size)
+    )
 
     for bbox, color, label in zip(img_boxes, colors, labels):  # type: ignore[arg-type]
         if fill:
@@ -258,7 +271,9 @@ def draw_segmentation_masks(
     image: torch.Tensor,
     masks: torch.Tensor,
     alpha: float = 0.8,
-    colors: Optional[Union[List[Union[str, Tuple[int, int, int]]], str, Tuple[int, int, int]]] = None,
+    colors: Optional[
+        Union[List[Union[str, Tuple[int, int, int]]], str, Tuple[int, int, int]]
+    ] = None,
 ) -> torch.Tensor:
 
     """
@@ -424,9 +439,11 @@ def flow_to_image(flow: torch.Tensor) -> torch.Tensor:
         flow = flow[None]  # Add batch dim
 
     if flow.ndim != 4 or flow.shape[1] != 2:
-        raise ValueError(f"Input flow should have shape (2, H, W) or (N, 2, H, W), got {orig_shape}.")
+        raise ValueError(
+            f"Input flow should have shape (2, H, W) or (N, 2, H, W), got {orig_shape}."
+        )
 
-    max_norm = torch.sum(flow ** 2, dim=1).sqrt().max()
+    max_norm = torch.sum(flow**2, dim=1).sqrt().max()
     epsilon = torch.finfo((flow).dtype).eps
     normalized_flow = flow / (max_norm + epsilon)
     img = _normalized_flow_to_image(normalized_flow)
@@ -453,7 +470,7 @@ def _normalized_flow_to_image(normalized_flow: torch.Tensor) -> torch.Tensor:
     flow_image = torch.zeros((N, 3, H, W), dtype=torch.uint8, device=device)
     colorwheel = _make_colorwheel().to(device)  # shape [55x3]
     num_cols = colorwheel.shape[0]
-    norm = torch.sum(normalized_flow ** 2, dim=1).sqrt()
+    norm = torch.sum(normalized_flow**2, dim=1).sqrt()
     a = torch.atan2(-normalized_flow[:, 1, :, :], -normalized_flow[:, 0, :, :]) / torch.pi
     fk = (a + 1) / 2 * (num_cols - 1)
     k0 = torch.floor(fk).to(torch.long)
@@ -519,7 +536,7 @@ def _make_colorwheel() -> torch.Tensor:
 
 
 def _generate_color_palette(num_objects: int):
-    palette = torch.tensor([2 ** 25 - 1, 2 ** 15 - 1, 2 ** 21 - 1])
+    palette = torch.tensor([2**25 - 1, 2**15 - 1, 2**21 - 1])
     return [tuple((i * palette) % 255) for i in range(num_objects)]
 
 
