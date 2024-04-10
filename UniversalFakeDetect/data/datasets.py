@@ -132,10 +132,10 @@ class RealFakeDataset(Dataset):
                 real_list, fake_list = real_list[init_idxs], fake_list[init_idxs]
             elif al_mode == "pool":
                 real_list[init_idxs] = np.ma.masked
-                real_list = real_list[real_list.mask is False]
+                real_list = real_list[real_list.mask == False]
 
                 fake_list[init_idxs] = np.ma.masked
-                fake_list = fake_list[fake_list.mask is False]
+                fake_list = fake_list[fake_list.mask == False]
 
         # setting the labels for the dataset
         self.labels_dict = {}
@@ -144,7 +144,7 @@ class RealFakeDataset(Dataset):
         for i in fake_list:
             self.labels_dict[i] = 1.0
 
-        self.total_list = np.concatenate([real_list.data, fake_list.data])
+        self.total_list = np.concatenate([real_list.data, fake_list.data], axis=0)
         shuffle(self.total_list)
         if opt.isTrain:
             crop_func = transforms.RandomCrop(opt.cropSize)
