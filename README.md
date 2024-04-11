@@ -64,10 +64,16 @@ To run training with Active Learning:
 ```bash
 bash UniversalFakeDetect/train_active_learning.sh
 ```
+Note: testing is automatically performed after Active Learning training finishes. The results dict will be printed to the output log file. 
 
 
 ## Performing Inference
-Run the following to perform inference for non Active Learning checkpoints. Make sure to edit the path arguments for the checkpoint file and the save directory.
+Run the following to perform inference for either normal or active learning checkpoints. Make sure to edit the path arguments for the checkpoint file and the save directory.
 ```bash
 bash UniversalFakeDetect/test.sh
 ```
+
+## Acknowledgements
+1. https://github.com/lunayht/DBALwithImgData
+2. https://github.com/Yuheng-Li/UniversalFakeDetect
+3. https://github.com/facebookresearch/SlowFast/blob/main/slowfast/utils/distributed.py
