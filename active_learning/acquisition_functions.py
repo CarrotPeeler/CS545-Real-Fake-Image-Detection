@@ -4,6 +4,7 @@
 
 import numpy as np
 import torch
+from torch.nn.modules.loss import BCELoss
 from scipy import stats
 from torch.utils.data import Dataset, Subset
 
@@ -27,14 +28,15 @@ def predictions_from_pool(
     random_subset_idxs = np.random.choice(pool_idxs, size=subsample_size, replace=False)
     subset = Subset(X_pool, random_subset_idxs)
     with torch.no_grad():
-        outputs = np.stack(
-            [
-                torch.sigmoid(learner.forward(subset, training=training)).cpu().numpy()
-                for _ in range(T)
-            ]
-        )
+        probs_per_dropout_iter = []
+        for _ in range(T):
+            logits, targets = learner.forward(subset, training=training)
+            probs = torch.sigmoid(logits).cpu().numpy()
+            probs_per_dropout_iter.append(probs)
+        outputs = np.stack(probs_per_dropout_iter)
     outputs = np.squeeze(outputs, axis=-1)
-    return outputs, random_subset_idxs
+    print(f"OUTPUT SHAPE: {outputs.shape}")
+    return outputs, random_subset_idxs, targets
 
 
 def uniform(
@@ -81,7 +83,7 @@ def shannon_entropy_function(
         E_H: If True, compute H and EH for BALD (default: False),
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset = predictions_from_pool(
+    outputs, random_subset, _ = predictions_from_pool(
         learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
     )
     pc = outputs.mean(axis=0)
@@ -120,6 +122,39 @@ def max_entropy(
     acquisition, random_subset = shannon_entropy_function(
         learner, X_pool, opt, pool_idxs, T, subsample_size=subsample_size, training=training
     )
+    idx = (-acquisition).argsort()[:n_query]
+    # retrieve n highest entropy sample idxs
+    query_scores = acquisition[idx]
+    # fetch pool idxs that correspond to the
+    # n sample idxs from the random subset
+    query_idx = random_subset[idx]
+    subset = Subset(X_pool, query_idx)
+    return query_idx, subset, query_scores
+
+
+def loss_weighted_max_entropy(
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    n_query: int = 10,
+    T: int = 100,
+    subsample_size=10000,
+    training: bool = True,
+):
+    outputs, random_subset, targets = predictions_from_pool(
+        learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
+    )
+    pc = outputs.mean(axis=0)
+    # Binary Shannon Entropy
+    acquisition = -pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)
+    # compute loss
+    loss_fn = BCELoss(reduction="none")
+    pc = torch.from_numpy(pc)
+    loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
+    # compute weighted acquisition (uncertainty) using loss
+    acquisition = loss * minmax_additive_norm(acquisition)
+    # compute max entropy
     idx = (-acquisition).argsort()[:n_query]
     # retrieve n highest entropy sample idxs
     query_scores = acquisition[idx]
@@ -195,7 +230,7 @@ def var_ratios(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset = predictions_from_pool(
+    outputs, random_subset, _ = predictions_from_pool(
         learner, X_pool, opt, pool_idxs, T, subsample_size, training
     )
     # get binary preds
@@ -229,7 +264,7 @@ def mean_std(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset = predictions_from_pool(
+    outputs, random_subset, _ = predictions_from_pool(
         learner, X_pool, opt, pool_idxs, T, subsample_size, training
     )
     outputs_pos = outputs
@@ -245,3 +280,11 @@ def mean_std(
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
     return query_idx, subset, query_scores
+
+
+def minmax_additive_norm(query_scores):
+    """Perform Min-Max Normalization w/ additive 1 constant"""
+    wl = query_scores
+    # 1e-10 prevents division by zero
+    norm = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1) + 1e-10)) + 1 
+    return norm
