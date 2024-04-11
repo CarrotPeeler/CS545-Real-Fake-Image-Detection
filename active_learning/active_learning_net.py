@@ -213,5 +213,8 @@ def select_acq_function(acq_func: int = 0) -> list:
         4: var_ratios,
         5: mean_std,
         6: loss_weighted_max_entropy,
+        7: loss_weighted_bald,
+        8: loss_weighted_var_ratios,
+        9: loss_weighted_mean_std,
     }
     return acq_func_dict[acq_func]

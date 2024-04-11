@@ -142,6 +142,13 @@ def loss_weighted_max_entropy(
     subsample_size=10000,
     training: bool = True,
 ):
+    """
+    Modified version of Max Entropy.
+    Weighs each sample's uncertainty score by their individual loss.
+    Performs Min-Max Additive 1 normalization on the Shannon Entropy scores
+    to prevent uncertainty scores of 0 from not being influenced by high loss. 
+    Then, multiplies normalized uncertainty scores by individual loss directly.
+    """
     outputs, random_subset, targets = predictions_from_pool(
         learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
     )
@@ -210,6 +217,42 @@ def bald(
     return query_idx, subset, query_scores
 
 
+def loss_weighted_bald(
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    n_query: int = 10,
+    T: int = 100,
+    subsample_size=10000,
+    training: bool = True,
+):
+    """
+    Modified version of BALD that weighs uncertainty scores via sample loss
+    """
+    outputs, random_subset, targets = predictions_from_pool(
+        learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
+    )
+    pc = outputs.mean(axis=0)
+    # Binary Shannon and BALD Entropy
+    H = -pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)
+    E_H = -np.mean(
+        outputs * np.log(outputs + 1e-10) + (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0
+    )
+    acquisition = H - E_H
+    # compute loss
+    loss_fn = BCELoss(reduction="none")
+    pc = torch.from_numpy(pc)
+    loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
+    # compute weighted acquisition (uncertainty) using loss
+    acquisition = loss * minmax_additive_norm(acquisition)
+    idx = (-acquisition).argsort()[:n_query]
+    query_scores = acquisition[idx]
+    query_idx = random_subset[idx]
+    subset = Subset(X_pool, query_idx)
+    return query_idx, subset, query_scores
+
+
 def var_ratios(
     learner,
     X_pool: Dataset,
@@ -237,6 +280,46 @@ def var_ratios(
     preds = (outputs[:, :] > 0.5).astype("uint8")
     _, count = stats.mode(preds, axis=0, keepdims=False)
     acquisition = (1 - count / T).reshape((-1,))
+    idx = (-acquisition).argsort()[:n_query]
+    query_scores = acquisition[idx]
+    query_idx = random_subset[idx]
+    subset = Subset(X_pool, query_idx)
+    return query_idx, subset, query_scores
+
+
+def loss_weighted_var_ratios(
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    n_query: int = 10,
+    T: int = 100,
+    subsample_size=10000,
+    training: bool = True,
+):
+    """Like Max Entropy but Variational Ratios measures lack of confidence.
+    Given: variational_ratio[x] := 1 - max_{y} p(y|x,D_{train})
+
+    Attributes:
+        learner: learner that is ready to measure uncertainty after training,
+        X_pool: Pool set to select uncertainty,
+        n_query: Number of points that maximise var_ratios a(x) from pool set,
+        T: Number of MC dropout iterations aka training iterations,
+        training: If False, run test without MC dropout. (default=True)
+    """
+    outputs, random_subset, targets = predictions_from_pool(
+        learner, X_pool, opt, pool_idxs, T, subsample_size, training
+    )
+    # get binary preds
+    preds = (outputs[:, :] > 0.5).astype("uint8")
+    _, count = stats.mode(preds, axis=0, keepdims=False)
+    acquisition = (1 - count / T).reshape((-1,))
+    # compute loss
+    loss_fn = BCELoss(reduction="none")
+    pc = torch.from_numpy(pc)
+    loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
+    # compute weighted acquisition (uncertainty) using loss
+    acquisition = loss * minmax_additive_norm(acquisition)
     idx = (-acquisition).argsort()[:n_query]
     query_scores = acquisition[idx]
     query_idx = random_subset[idx]
@@ -275,6 +358,52 @@ def mean_std(
 
     sigma_c = np.std(probs, axis=0)
     acquisition = np.mean(sigma_c, axis=-1)
+    idx = (-acquisition).argsort()[:n_query]
+    query_scores = acquisition[idx]
+    query_idx = random_subset[idx]
+    subset = Subset(X_pool, query_idx)
+    return query_idx, subset, query_scores
+
+
+def loss_weighted_mean_std(
+    learner,
+    X_pool: Dataset,
+    opt,
+    pool_idxs: np.ndarray,
+    n_query: int = 10,
+    T: int = 100,
+    subsample_size=10000,
+    training: bool = True,
+):
+    """Maximise mean standard deviation
+    Given: sigma_c = sqrt(E_{q(w)}[p(y=c|x,w)^2]-E_{q(w)}[p(y=c|x,w)]^2)
+
+    Attributes:
+        learner: learner that is ready to measure uncertainty after training,
+        X_pool: Pool set to select uncertainty,
+        n_query: Number of points that maximise mean std a(x) from pool set,
+        T: Number of MC dropout iterations aka training iterations,
+        training: If False, run test without MC dropout. (default=True)
+    """
+    outputs, random_subset, targets = predictions_from_pool(
+        learner, X_pool, opt, pool_idxs, T, subsample_size, training
+    )
+    outputs_pos = outputs
+    outputs_neg = 1 - outputs_pos
+
+    # create separate pos and neg class probs in last dim
+    probs = np.stack([outputs_neg, outputs_pos], axis=-1)
+
+    sigma_c = np.std(probs, axis=0)
+    acquisition = np.mean(sigma_c, axis=-1)
+    
+    # compute loss
+    loss_fn = BCELoss(reduction="none")
+    pc = torch.from_numpy(pc)
+    loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
+    # compute weighted acquisition (uncertainty) using loss
+    acquisition = loss * minmax_additive_norm(acquisition)
+    
     idx = (-acquisition).argsort()[:n_query]
     query_scores = acquisition[idx]
     query_idx = random_subset[idx]
