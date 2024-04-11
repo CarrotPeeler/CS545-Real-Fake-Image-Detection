@@ -233,7 +233,7 @@ class RealFakeDataset(Dataset):
             img = png2jpg(img, self.jpeg_quality)
 
         img = self.transform(img)
-        return img, label
+        return img, label, idx
 
 
 if __name__ == "__main__":
