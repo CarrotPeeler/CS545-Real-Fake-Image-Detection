@@ -6,6 +6,7 @@ from modAL.models.base import BaseLearner
 from torch.utils.data import ConcatDataset, Dataset, Subset
 
 from UniversalFakeDetect.networks.trainer import Trainer
+from active_learning.acquisition_functions import minmax_additive_norm 
 
 
 class TorchActiveLearner(BaseLearner):
@@ -75,8 +76,7 @@ class TorchActiveLearner(BaseLearner):
         return self.val_func(self.opt, self.model, dataset)
 
     def get_query_weights(self, query_scores: np.ndarray):
-        wl = query_scores
-        query_weights = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1) + 1e-10)) + 1 # min-max normalization w/ additive 1
+        query_weights = minmax_additive_norm(query_scores)
         query_weights = np.power(query_weights, 3)
         query_weights = torch.tensor(query_weights).to(self.model.device)
         return query_weights
@@ -298,11 +298,14 @@ class TorchActiveLearner(BaseLearner):
             self.model.train(training)
 
             logits = []
+            targets = []
             # perform mini-batch inference
             for i, data in enumerate(loader):
                 self.model.set_input(data)
                 out = self.model.forward_raw()
                 logits.append(out)
+                targets.append(data[1])
 
             logits = torch.cat(logits)
-        return logits
+            targets = torch.cat(targets)
+        return logits, targets

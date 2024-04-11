@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 from tqdm.auto import tqdm
 
 import UniversalFakeDetect.distributed as du
-from active_learning.acquisition_functions import bald, max_entropy, mean_std, uniform, var_ratios
+from active_learning.acquisition_functions import *
 from active_learning.active_learners import TorchActiveLearner
 from UniversalFakeDetect.data import create_dataloader, shuffle_dataset
 from UniversalFakeDetect.earlystop import EarlyStopping
@@ -212,5 +212,6 @@ def select_acq_function(acq_func: int = 0) -> list:
         3: bald,
         4: var_ratios,
         5: mean_std,
+        6: loss_weighted_max_entropy,
     }
     return acq_func_dict[acq_func]
