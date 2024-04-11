@@ -77,7 +77,7 @@ class TorchActiveLearner(BaseLearner):
     def get_query_weights(self, query_scores: np.ndarray):
         wl = query_scores
         query_weights = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1))) + 1 # min-max normalization w/ additive 1
-        # query_weights = np.power(query_weights, 4)
+        query_weights = np.power(query_weights, 3)
         query_weights = torch.tensor(query_weights).to(self.model.device)
         return query_weights
 
