@@ -89,7 +89,7 @@ class BaseOptions:
         parser.add_argument(
             "--use_weighted_loss",
             type=bool,
-            default=True,
+            default=False,
             help="enable or disable weighted loss for Active Learning",
         )
         parser.add_argument(
