@@ -35,7 +35,6 @@ def predictions_from_pool(
             probs_per_dropout_iter.append(probs)
         outputs = np.stack(probs_per_dropout_iter)
     outputs = np.squeeze(outputs, axis=-1)
-    print(f"OUTPUT SHAPE: {outputs.shape}")
     return outputs, random_subset_idxs, targets
 
 
