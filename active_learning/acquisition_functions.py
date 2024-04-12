@@ -156,9 +156,12 @@ def loss_weighted_max_entropy(
     to prevent uncertainty scores of 0 from not being influenced by high loss. 
     Then, multiplies normalized uncertainty scores by individual loss directly.
     """
-    acquisition, random_subset, targets = shannon_entropy_function(
-        learner, X_pool, opt, pool_idxs, T, subsample_size=subsample_size, training=training
+    outputs, random_subset, targets = predictions_from_pool(
+        learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
     )
+    pc = outputs.mean(axis=0)
+    # Binary Shannon Entropy
+    acquisition = -pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)
     # compute loss
     loss_fn = BCELoss(reduction="none")
     pc = torch.from_numpy(pc)
@@ -240,15 +243,14 @@ def loss_weighted_bald(
     """
     Modified version of BALD that weighs uncertainty scores via sample loss
     """
-    H, E_H, random_subset, targets = shannon_entropy_function(
-        learner,
-        X_pool,
-        opt,
-        pool_idxs,
-        T,
-        E_H=True,
-        subsample_size=subsample_size,
-        training=training,
+    outputs, random_subset, targets = predictions_from_pool(
+        learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
+    )
+    pc = outputs.mean(axis=0)
+    # Binary Shannon and BALD Entropy
+    H = -pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)
+    E_H = -np.mean(
+        outputs * np.log(outputs + 1e-10) + (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0
     )
     acquisition = H - E_H
     # compute loss
