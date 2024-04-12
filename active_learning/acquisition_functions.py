@@ -25,8 +25,13 @@ def predictions_from_pool(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    random_subset_idxs = np.random.choice(pool_idxs, size=subsample_size, replace=False)
-    subset = Subset(X_pool, random_subset_idxs)
+    if subsample_size is None:
+        random_subset_idxs = np.array(list(range(len(X_pool))))
+        subset = X_pool
+    else:
+        random_subset_idxs = np.random.choice(pool_idxs, size=subsample_size, replace=False)
+        subset = Subset(X_pool, random_subset_idxs)
+        
     with torch.no_grad():
         probs_per_dropout_iter = []
         for _ in range(T):
@@ -82,7 +87,7 @@ def shannon_entropy_function(
         E_H: If True, compute H and EH for BALD (default: False),
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset, _ = predictions_from_pool(
+    outputs, random_subset, targets = predictions_from_pool(
         learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
     )
     pc = outputs.mean(axis=0)
@@ -95,7 +100,7 @@ def shannon_entropy_function(
             outputs * np.log(outputs + 1e-10) + (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0
         )
         return H, E, random_subset
-    return H, random_subset
+    return H, random_subset, targets
 
 
 def max_entropy(
@@ -118,10 +123,13 @@ def max_entropy(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    acquisition, random_subset = shannon_entropy_function(
+    acquisition, random_subset, targets = shannon_entropy_function(
         learner, X_pool, opt, pool_idxs, T, subsample_size=subsample_size, training=training
     )
-    idx = (-acquisition).argsort()[:n_query]
+    if opt.balance_acquisition:
+        idx = balance_acquisition(acquisition, targets, n_query)
+    else:
+        idx = (-acquisition).argsort()[:n_query]
     # retrieve n highest entropy sample idxs
     query_scores = acquisition[idx]
     # fetch pool idxs that correspond to the
@@ -148,12 +156,9 @@ def loss_weighted_max_entropy(
     to prevent uncertainty scores of 0 from not being influenced by high loss. 
     Then, multiplies normalized uncertainty scores by individual loss directly.
     """
-    outputs, random_subset, targets = predictions_from_pool(
-        learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
+    acquisition, random_subset, targets = shannon_entropy_function(
+        learner, X_pool, opt, pool_idxs, T, subsample_size=subsample_size, training=training
     )
-    pc = outputs.mean(axis=0)
-    # Binary Shannon Entropy
-    acquisition = -pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)
     # compute loss
     loss_fn = BCELoss(reduction="none")
     pc = torch.from_numpy(pc)
@@ -161,7 +166,10 @@ def loss_weighted_max_entropy(
     # compute weighted acquisition (uncertainty) using loss
     acquisition = loss * minmax_additive_norm(acquisition)
     # compute max entropy
-    idx = (-acquisition).argsort()[:n_query]
+    if opt.balance_acquisition:
+        idx = balance_acquisition(acquisition, targets, n_query)
+    else:
+        idx = (-acquisition).argsort()[:n_query]
     # retrieve n highest entropy sample idxs
     query_scores = acquisition[idx]
     # fetch pool idxs that correspond to the
@@ -198,7 +206,7 @@ def bald(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    H, E_H, random_subset = shannon_entropy_function(
+    H, E_H, random_subset, targets = shannon_entropy_function(
         learner,
         X_pool,
         opt,
@@ -209,7 +217,10 @@ def bald(
         training=training,
     )
     acquisition = H - E_H
-    idx = (-acquisition).argsort()[:n_query]
+    if opt.balance_acquisition:
+        idx = balance_acquisition(acquisition, targets, n_query)
+    else:
+        idx = (-acquisition).argsort()[:n_query]
     query_scores = acquisition[idx]
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
@@ -229,14 +240,15 @@ def loss_weighted_bald(
     """
     Modified version of BALD that weighs uncertainty scores via sample loss
     """
-    outputs, random_subset, targets = predictions_from_pool(
-        learner, X_pool, opt, pool_idxs, T, subsample_size, training=training
-    )
-    pc = outputs.mean(axis=0)
-    # Binary Shannon and BALD Entropy
-    H = -pc * np.log(pc + 1e-10) - (1 - pc) * np.log(1 - pc + 1e-10)
-    E_H = -np.mean(
-        outputs * np.log(outputs + 1e-10) + (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0
+    H, E_H, random_subset, targets = shannon_entropy_function(
+        learner,
+        X_pool,
+        opt,
+        pool_idxs,
+        T,
+        E_H=True,
+        subsample_size=subsample_size,
+        training=training,
     )
     acquisition = H - E_H
     # compute loss
@@ -245,7 +257,10 @@ def loss_weighted_bald(
     loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
     # compute weighted acquisition (uncertainty) using loss
     acquisition = loss * minmax_additive_norm(acquisition)
-    idx = (-acquisition).argsort()[:n_query]
+    if opt.balance_acquisition:
+        idx = balance_acquisition(acquisition, targets, n_query)
+    else:
+        idx = (-acquisition).argsort()[:n_query]
     query_scores = acquisition[idx]
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
@@ -272,14 +287,17 @@ def var_ratios(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset, _ = predictions_from_pool(
+    outputs, random_subset, targets = predictions_from_pool(
         learner, X_pool, opt, pool_idxs, T, subsample_size, training
     )
     # get binary preds
     preds = (outputs[:, :] > 0.5).astype("uint8")
     _, count = stats.mode(preds, axis=0, keepdims=False)
     acquisition = (1 - count / T).reshape((-1,))
-    idx = (-acquisition).argsort()[:n_query]
+    if opt.balance_acquisition:
+        idx = balance_acquisition(acquisition, targets, n_query)
+    else:
+        idx = (-acquisition).argsort()[:n_query]
     query_scores = acquisition[idx]
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
@@ -319,7 +337,10 @@ def loss_weighted_var_ratios(
     loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
     # compute weighted acquisition (uncertainty) using loss
     acquisition = loss * minmax_additive_norm(acquisition)
-    idx = (-acquisition).argsort()[:n_query]
+    if opt.balance_acquisition:
+        idx = balance_acquisition(acquisition, targets, n_query)
+    else:
+        idx = (-acquisition).argsort()[:n_query]
     query_scores = acquisition[idx]
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
@@ -346,7 +367,7 @@ def mean_std(
         T: Number of MC dropout iterations aka training iterations,
         training: If False, run test without MC dropout. (default=True)
     """
-    outputs, random_subset, _ = predictions_from_pool(
+    outputs, random_subset, targets = predictions_from_pool(
         learner, X_pool, opt, pool_idxs, T, subsample_size, training
     )
     outputs_pos = outputs
@@ -357,7 +378,10 @@ def mean_std(
 
     sigma_c = np.std(probs, axis=0)
     acquisition = np.mean(sigma_c, axis=-1)
-    idx = (-acquisition).argsort()[:n_query]
+    if opt.balance_acquisition:
+        idx = balance_acquisition(acquisition, targets, n_query)
+    else:
+        idx = (-acquisition).argsort()[:n_query]
     query_scores = acquisition[idx]
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
@@ -402,12 +426,37 @@ def loss_weighted_mean_std(
     loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
     # compute weighted acquisition (uncertainty) using loss
     acquisition = loss * minmax_additive_norm(acquisition)
-    
-    idx = (-acquisition).argsort()[:n_query]
+
+    if opt.balance_acquisition:
+        idx = balance_acquisition(acquisition, targets, n_query)
+    else:
+        idx = (-acquisition).argsort()[:n_query]
     query_scores = acquisition[idx]
     query_idx = random_subset[idx]
     subset = Subset(X_pool, query_idx)
     return query_idx, subset, query_scores
+
+
+def balance_acquisition(acquisition: np.ndarray, targets: torch.Tensor, n_query):
+    """
+    Ensures the query results have an even number of positive and negative class samples.
+    Returns query indices for samples with high uncertainty scores. 
+    """
+    # dedicate half of the query size to each class
+    n_query = int(n_query/2) 
+    targets = targets.detach().cpu().numpy()
+    # parse positive and negative class samples
+    pos_cls_idxs = np.where(targets == 1)[0]
+    neg_cls_idxs = np.where(targets == 0)[0]
+    # parse acquisition based on class
+    pos_acq = acquisition[pos_cls_idxs]
+    neg_acq = acquisition[neg_cls_idxs]
+    # get indices for samples w/ highest uncertainty 
+    pos_query_idxs = (-pos_acq).argsort()[:n_query]
+    neg_query_idxs = (-neg_acq).argsort()[:n_query]
+    # concat both idxs
+    query_idxs = np.concatenate([pos_query_idxs, neg_query_idxs])
+    return query_idxs
 
 
 def minmax_additive_norm(query_scores):
