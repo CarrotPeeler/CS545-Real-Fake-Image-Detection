@@ -76,10 +76,26 @@ class TorchActiveLearner(BaseLearner):
         return self.val_func(self.opt, self.model, dataset)
 
     def get_query_weights(self, query_scores: np.ndarray):
+        """
+        Convert query scores to weight values for sample loss
+        """
         query_weights = minmax_additive_norm(query_scores)
         query_weights = np.power(query_weights, 3)
         query_weights = torch.tensor(query_weights).to(self.model.device)
         return query_weights
+    
+    def add_to_weights_idx_map(self, query_scores: np.ndarray, query_idxs: np.ndarray):
+        """
+        Maps a sample's dataset index to an index corresponding to where its weight value 
+        is stored in the self.acq_weights array.
+        """
+        for i in range(len(query_idxs)):
+            # shift idxs by init dataset size to avoid idx collision
+            dataset_idx = query_idxs[i] + (self.opt.num_samples_per_class * 2) 
+            # compute corresponding weight idx in self.acq_weights
+            acq_weights_idx = len(self.acq_weights) - len(query_scores) + i
+            # store mapping
+            self.acq_weights_idx_map[dataset_idx] = acq_weights_idx        
 
     def _add_training_data(self, dataset: Dataset, query_scores=None, query_idxs=None) -> None:
         """
@@ -106,18 +122,10 @@ class TorchActiveLearner(BaseLearner):
 
             if self.opt.use_weighted_loss:
                 assert len(query_scores) == len(query_idxs)
-
+                # call query here on self.train_dataset to reassign weight values to self.acq_weights first
                 query_weights = self.get_query_weights(query_scores)
                 self.acq_weights = torch.cat([self.acq_weights, query_weights])
-                # map corresponding weight idxs to their respective idx in self.acq_weights
-                for i in range(len(query_idxs)):
-                    # shift idxs by init dataset size to avoid idx collision
-                    dataset_idx = query_idxs[i] + (self.opt.num_samples_per_class * 2) 
-                    # compute corresponding weight idx in self.acq_weights
-                    acq_weights_idx = len(self.acq_weights) - len(query_scores) + i
-                    # store mapping
-                    self.acq_weights_idx_map[dataset_idx] = acq_weights_idx
-
+                self.add_to_weights_idx_map(query_scores, query_idxs)
         print(f"Updated Train Size: {len(self.train_dataset)}")
 
     def _fit_to_known(self, bootstrap: bool = False, **fit_kwargs) -> "BaseLearner":
