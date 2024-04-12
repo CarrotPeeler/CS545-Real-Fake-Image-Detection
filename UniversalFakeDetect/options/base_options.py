@@ -88,9 +88,13 @@ class BaseOptions:
         )
         parser.add_argument(
             "--use_weighted_loss",
-            type=bool,
-            default=False,
+            action="store_true",
             help="enable or disable weighted loss for Active Learning",
+        )
+        parser.add_argument(
+            "--balance_acquisition",
+            action="store_true",
+            help="enable or disable class balancing for the query step in Active Learning",
         )
         parser.add_argument(
             "--num_samples_per_class",
