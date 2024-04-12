@@ -17,16 +17,11 @@ from UniversalFakeDetect.networks.trainer import Trainer
 from UniversalFakeDetect.validate import validate as val
 
 
-def train(opt, 
-          model: Trainer, 
-          train_dataset: Dataset, 
-          weights: torch.Tensor = None,
-          weights_idx_map: Dict = None):
+def train(opt, learner: TorchActiveLearner, train_dataset: Dataset):
     """Generic PyTorch train function"""
-
     train_loader = create_dataloader(opt, premade_dataset=train_dataset)
 
-    model.train()
+    learner.model.train()
 
     if len(opt.gpu_ids) > 1:
         du.init_distributed_training(len(opt.gpu_ids), opt.shard_id)
@@ -41,23 +36,26 @@ def train(opt,
             if hasattr(train_loader.dataset, "_set_epoch_num"):
                 train_loader.dataset._set_epoch_num(epoch)
 
+        if opt.use_weighted_loss:
+            # perform decay on sample weights for loss
+            learner.regress_acq_weights(epoch)
+
         # perform mini-batch training
         for i, data in enumerate(train_loader):
-            model.total_steps += 1
+            learner.model.total_steps += 1
 
-            model.set_input(data[:2]) # [imgs, labels]
+            learner.model.set_input(data[:2]) # [imgs, labels]
             # print(f"INDICES: {data[2]}")
 
             if opt.use_weighted_loss:
-                assert weights is not None, "Error: weights for loss are of type None"
-                assert weights_idx_map is not None, "Error: weights_idx_map is of type None"
-
-                weights_idxs = list(map(lambda x:weights_idx_map[x.item()], data[2]))
+                assert learner.acq_weights is not None, "Error: weights for loss are of type None"
+                assert learner.acq_weights_idx_map is not None, "Error: weights_idx_map is of type None"
+                weights_idxs = list(map(lambda x:learner.acq_weights_idx_map[x.item()], data[2]))
                 # s_idx, e_idx = opt.batch_size * i, opt.batch_size * (i + 1)
                 # print(f"{s_idx} to {e_idx}\nWeights: {weights[weights_idxs]}")
-                model.optimize_parameters(weights[weights_idxs])
+                learner.model.optimize_parameters(learner.acq_weights[weights_idxs])
             else:
-                model.optimize_parameters()
+                learner.model.optimize_parameters()
 
             # sync GPUs
             torch.cuda.synchronize()
@@ -66,16 +64,16 @@ def train(opt,
         torch.cuda.empty_cache()
 
         print(
-            f"Epoch {epoch + 1} | Train loss: {model.loss} | Dur: {(time.time() - ep_s_t):0.4f}s"
+            f"Epoch {epoch + 1} | Train loss: {learner.model.loss} | Dur: {(time.time() - ep_s_t):0.4f}s"
         )
 
 
-def validate(opt, model: Trainer, val_dataset: Dataset):
-    model.eval()
+def validate(opt, learner: TorchActiveLearner, val_dataset: Dataset):
+    learner.model.eval()
     val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=opt.num_threads
     )
-    ap, r_acc, f_acc, acc = val(model.model, val_loader, gpu_id=model.device)
+    ap, r_acc, f_acc, acc = val(learner.model.model, val_loader, gpu_id=learner.model.device)
     if len(opt.gpu_ids) > 1:
         ap, r_acc, f_acc, acc = du.all_reduce([ap, r_acc, f_acc, acc])
     return acc, r_acc, f_acc, ap

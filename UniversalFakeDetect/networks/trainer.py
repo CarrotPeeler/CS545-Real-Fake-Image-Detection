@@ -103,9 +103,16 @@ class Trainer(BaseModel):
         self.forward()
         if self.opt.use_active_learning and self.opt.use_weighted_loss:
             assert weights is not None, "Error: given type None as weights"
-            self.loss = self.loss_fn(self.output.squeeze(1), self.label, weights)
+            self.loss = self.loss_fn(
+                self.output.squeeze(1), 
+                self.label, 
+                weights,
+            )
         else:
-            self.loss = self.loss_fn(self.output.squeeze(1), self.label)
+            self.loss = self.loss_fn(
+                self.output.squeeze(1), 
+                self.label,
+            )
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()

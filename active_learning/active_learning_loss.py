@@ -53,7 +53,13 @@ class BCEWithLogitsLoss(_Loss):
         self.weight: Optional[Tensor]
         self.pos_weight: Optional[Tensor]
 
-    def forward(self, input: Tensor, target: Tensor, weight: Tensor) -> Tensor:
+    def forward(
+        self, 
+        input: Tensor, 
+        target: Tensor, 
+        weight: Tensor, 
+        reduction: str = "mean",
+    ) -> Tensor:
         return F.binary_cross_entropy_with_logits(
-            input, target, weight, pos_weight=self.pos_weight, reduction=self.reduction
+            input, target, weight, pos_weight=self.pos_weight, reduction=reduction
         )
