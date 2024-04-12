@@ -70,10 +70,10 @@ class TorchActiveLearner(BaseLearner):
             self._fit_to_known(bootstrap=bootstrap_init, **fit_kwargs)
 
     def train(self, dataset: Dataset):
-        self.train_func(self.opt, self.model, dataset, self.acq_weights, self.acq_weights_idx_map)
+        self.train_func(self.opt, self, dataset)
 
     def validate(self, dataset: Dataset):
-        return self.val_func(self.opt, self.model, dataset)
+        return self.val_func(self.opt, self, dataset)
 
     def get_query_weights(self, query_scores: np.ndarray):
         """
@@ -83,6 +83,15 @@ class TorchActiveLearner(BaseLearner):
         query_weights = np.power(query_weights, 3)
         query_weights = torch.tensor(query_weights).to(self.model.device)
         return query_weights
+    
+    def regress_acq_weights(self, iter: int, decay_rate=0.99):
+        """
+        Perform exponential decay on weights for sample loss.
+        Decay is based on how many iterations have passed. 
+        """
+        if iter > 0:
+            self.acq_weights *= decay_rate
+            self.acq_weights[self.acq_weights < 1] = 1
     
     def add_to_weights_idx_map(self, query_scores: np.ndarray, query_idxs: np.ndarray):
         """
@@ -122,7 +131,7 @@ class TorchActiveLearner(BaseLearner):
 
             if self.opt.use_weighted_loss:
                 assert len(query_scores) == len(query_idxs)
-                # call query here on self.train_dataset to reassign weight values to self.acq_weights first
+                # query here on self.train_dataset to reassign weight values to self.acq_weights
                 query_weights = self.get_query_weights(query_scores)
                 self.acq_weights = torch.cat([self.acq_weights, query_weights])
                 self.add_to_weights_idx_map(query_scores, query_idxs)
