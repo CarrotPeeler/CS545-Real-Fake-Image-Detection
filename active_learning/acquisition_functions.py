@@ -99,7 +99,7 @@ def shannon_entropy_function(
         E = -np.mean(
             outputs * np.log(outputs + 1e-10) + (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0
         )
-        return H, E, random_subset
+        return H, E, random_subset, targets
     return H, random_subset, targets
 
 
