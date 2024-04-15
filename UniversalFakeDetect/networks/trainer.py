@@ -57,7 +57,11 @@ class Trainer(BaseModel):
         else:
             raise ValueError("optim should be [adam, sgd]")
 
-        self.loss_fn = DynamicWeightsBCE() if self.opt.use_active_learning and self.opt.use_weighted_loss else nn.BCEWithLogitsLoss()
+        self.loss_fn = (
+            DynamicWeightsBCE()
+            if self.opt.use_active_learning and self.opt.use_weighted_loss
+            else nn.BCEWithLogitsLoss()
+        )
 
         # set current device and transfer model to it
         if len(opt.gpu_ids) > 1:
@@ -104,13 +108,13 @@ class Trainer(BaseModel):
         if self.opt.use_active_learning and self.opt.use_weighted_loss:
             assert weights is not None, "Error: given type None as weights"
             self.loss = self.loss_fn(
-                self.output.squeeze(1), 
-                self.label, 
+                self.output.squeeze(1),
+                self.label,
                 weights,
             )
         else:
             self.loss = self.loss_fn(
-                self.output.squeeze(1), 
+                self.output.squeeze(1),
                 self.label,
             )
         self.optimizer.zero_grad()

@@ -103,7 +103,7 @@ def train(opt, val_opt):
         for i, data in enumerate(tqdm(data_loader)):
             model.total_steps += 1
 
-            model.set_input(data[:2]) # [imgs, labels]
+            model.set_input(data[:2])  # [imgs, labels]
             model.optimize_parameters()
 
             if model.total_steps % opt.loss_freq == 0:

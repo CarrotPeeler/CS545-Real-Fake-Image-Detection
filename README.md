@@ -64,7 +64,7 @@ To run training with Active Learning:
 ```bash
 bash UniversalFakeDetect/train_active_learning.sh
 ```
-Note: testing is automatically performed after Active Learning training finishes. The results dict will be printed to the output log file. 
+Note: testing is automatically performed after Active Learning training finishes. The results dict will be printed to the output log file.
 
 
 ## Performing Inference

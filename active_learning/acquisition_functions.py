@@ -4,8 +4,8 @@
 
 import numpy as np
 import torch
-from torch.nn.modules.loss import BCELoss
 from scipy import stats
+from torch.nn.modules.loss import BCELoss
 from torch.utils.data import Dataset, Subset
 
 
@@ -31,7 +31,7 @@ def predictions_from_pool(
     else:
         random_subset_idxs = np.random.choice(pool_idxs, size=subsample_size, replace=False)
         subset = Subset(X_pool, random_subset_idxs)
-        
+
     with torch.no_grad():
         probs_per_dropout_iter = []
         for _ in range(T):
@@ -153,7 +153,7 @@ def loss_weighted_max_entropy(
     Modified version of Max Entropy.
     Weighs each sample's uncertainty score by their individual loss.
     Performs Min-Max Additive 1 normalization on the Shannon Entropy scores
-    to prevent uncertainty scores of 0 from not being influenced by high loss. 
+    to prevent uncertainty scores of 0 from not being influenced by high loss.
     Then, multiplies normalized uncertainty scores by individual loss directly.
     """
     outputs, random_subset, targets = predictions_from_pool(
@@ -421,7 +421,7 @@ def loss_weighted_mean_std(
 
     sigma_c = np.std(probs, axis=0)
     acquisition = np.mean(sigma_c, axis=-1)
-    
+
     # compute loss
     loss_fn = BCELoss(reduction="none")
     pc = torch.from_numpy(pc)
@@ -442,10 +442,10 @@ def loss_weighted_mean_std(
 def balance_acquisition(acquisition: np.ndarray, targets: torch.Tensor, n_query):
     """
     Ensures the query results have an even number of positive and negative class samples.
-    Returns query indices for samples with high uncertainty scores. 
+    Returns query indices for samples with high uncertainty scores.
     """
     # dedicate half of the query size to each class
-    n_query = int(n_query/2) 
+    n_query = int(n_query / 2)
     targets = targets.detach().cpu().numpy()
     # parse positive and negative class samples
     pos_cls_idxs = np.where(targets == 1)[0]
@@ -453,7 +453,7 @@ def balance_acquisition(acquisition: np.ndarray, targets: torch.Tensor, n_query)
     # parse acquisition based on class
     pos_acq = acquisition[pos_cls_idxs]
     neg_acq = acquisition[neg_cls_idxs]
-    # get indices for samples w/ highest uncertainty 
+    # get indices for samples w/ highest uncertainty
     pos_query_idxs = (-pos_acq).argsort()[:n_query]
     neg_query_idxs = (-neg_acq).argsort()[:n_query]
     # concat both idxs
@@ -465,5 +465,5 @@ def minmax_additive_norm(query_scores):
     """Perform Min-Max Normalization w/ additive 1 constant"""
     wl = query_scores
     # 1e-10 prevents division by zero
-    norm = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1) + 1e-10)) + 1 
+    norm = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1) + 1e-10)) + 1
     return norm
