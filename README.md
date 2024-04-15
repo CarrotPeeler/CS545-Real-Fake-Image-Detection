@@ -73,7 +73,15 @@ Run the following to perform inference for either normal or active learning chec
 bash UniversalFakeDetect/test.sh
 ```
 
+## LLaVA Real-Fake Explainer
+### Training data
+Explainer training data is generated with LLaVA 1.6-7b and source category-guided prompts as shown in `LLaVA_Experiments/llava_train_data.py`. The `real_fake_llava_train.json` file can be found [here](https://wpi0-my.sharepoint.com/:f:/g/personal/simran_wpi_edu/EjYNAq_1KQlImgOQlwbpZZQBvx7SfIxwpYqibTw3PBE90A?e=55azN8).
+
+### Test Explanations
+Human-like reasoning behind why our LoRA (PEFT) finetuned LLaVA model thinks a test image is real or fake can be found [here](https://wpi0-my.sharepoint.com/:f:/g/personal/simran_wpi_edu/EjYNAq_1KQlImgOQlwbpZZQBvx7SfIxwpYqibTw3PBE90A?e=55azN8) in the `test_explanations_and_classifications.txt` file.
+
 ## Acknowledgements
 1. https://github.com/lunayht/DBALwithImgData
 2. https://github.com/Yuheng-Li/UniversalFakeDetect
 3. https://github.com/facebookresearch/SlowFast/blob/main/slowfast/utils/distributed.py
+4. https://github.com/haotian-liu/LLaVA

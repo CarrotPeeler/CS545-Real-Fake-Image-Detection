@@ -2,6 +2,9 @@ sentry-dataset/*
 log.txt
 checkpoints/*
 
+LLaVa_Experiments/real_fake_llava_train.json
+LLaVa_Experiments/test_explanations_and_classifications.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

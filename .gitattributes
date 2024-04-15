@@ -1,2 +1,0 @@
-LLaVa_Experiments/real_fake_llava_train.json filter=lfs diff=lfs merge=lfs -text
-LLaVa_Experiments/test_explanations_and_classifications.txt filter=lfs diff=lfs merge=lfs -text
