@@ -335,6 +335,7 @@ def loss_weighted_var_ratios(
     acquisition = (1 - count / T).reshape((-1,))
     # compute loss
     loss_fn = BCELoss(reduction="none")
+    pc = outputs.mean(axis=0)
     pc = torch.from_numpy(pc)
     loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
     # compute weighted acquisition (uncertainty) using loss
@@ -424,6 +425,7 @@ def loss_weighted_mean_std(
     
     # compute loss
     loss_fn = BCELoss(reduction="none")
+    pc = outputs.mean(axis=0)
     pc = torch.from_numpy(pc)
     loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
     # compute weighted acquisition (uncertainty) using loss
