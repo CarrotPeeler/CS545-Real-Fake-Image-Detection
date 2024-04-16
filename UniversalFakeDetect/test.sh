@@ -1,1 +1,1 @@
-python3 UniversalFakeDetect/validate.py --arch=CLIP:ViT-L/14 --ckpt=checkpoints/clip_vitl14/model_epoch_14.pth --result_folder=UniversalFakeDetect/results/clip_vitl14_14ep < /dev/null > val_clip_vitl14_14ep.txt 2>&1 &
+python3 UniversalFakeDetect/validate.py --arch=CLIP:RN50 --ckpt=checkpoints/clip_rn50/model_epoch_5.pth --result_folder=UniversalFakeDetect/results/clip_fixed_data_rn50_5ep < /dev/null > val_clip_rn50_5ep.txt 2>&1 &
