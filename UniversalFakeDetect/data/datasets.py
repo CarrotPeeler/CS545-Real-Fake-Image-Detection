@@ -192,7 +192,7 @@ class RealFakeDataset(Dataset):
         img_path = self.total_list[idx]
         label = self.labels_dict[img_path]
         img = Image.open(img_path).convert("RGB")
-        img = self.transform(img) 
+        img = self.transform(img)
         # shift all pool sample idxs by the size of the init dataset; prevents idx collision for dataset concatenation
         if self.opt.use_active_learning and self.al_mode == "pool":
             idx += len(self.init_idxs) * 2

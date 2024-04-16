@@ -4,8 +4,8 @@
 
 import numpy as np
 import torch
-from torch.nn.modules.loss import BCELoss
 from scipy import stats
+from torch.nn.modules.loss import BCELoss
 from torch.utils.data import Dataset, Subset
 
 
@@ -31,7 +31,7 @@ def predictions_from_pool(
     else:
         random_subset_idxs = np.random.choice(pool_idxs, size=subsample_size, replace=False)
         subset = Subset(X_pool, random_subset_idxs)
-        
+
     with torch.no_grad():
         probs_per_dropout_iter = []
         for _ in range(T):
@@ -253,6 +253,7 @@ def loss_weighted_bald(
         outputs * np.log(outputs + 1e-10) + (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0
     )
     acquisition = H - E_H
+
     # compute loss
     loss_fn = BCELoss(reduction="none")
     pc = torch.from_numpy(pc)
@@ -444,10 +445,10 @@ def loss_weighted_mean_std(
 def balance_acquisition(acquisition: np.ndarray, targets: torch.Tensor, n_query):
     """
     Ensures the query results have an even number of positive and negative class samples.
-    Returns query indices for samples with high uncertainty scores. 
+    Returns query indices for samples with high uncertainty scores.
     """
     # dedicate half of the query size to each class
-    n_query = int(n_query/2) 
+    n_query = int(n_query / 2)
     targets = targets.detach().cpu().numpy()
     # parse positive and negative class samples
     pos_cls_idxs = np.where(targets == 1)[0]
