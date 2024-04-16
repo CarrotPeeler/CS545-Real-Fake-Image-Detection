@@ -44,15 +44,13 @@ def train(opt, learner: TorchActiveLearner, train_dataset: Dataset):
         for i, data in enumerate(train_loader):
             learner.model.total_steps += 1
 
-            learner.model.set_input(data[:2])  # [imgs, labels]
+            learner.model.set_input(data[:2]) # [imgs, labels]
             # print(f"INDICES: {data[2]}")
 
             if opt.use_weighted_loss:
                 assert learner.acq_weights is not None, "Error: weights for loss are of type None"
-                assert (
-                    learner.acq_weights_idx_map is not None
-                ), "Error: weights_idx_map is of type None"
-                weights_idxs = list(map(lambda x: learner.acq_weights_idx_map[x.item()], data[2]))
+                assert learner.acq_weights_idx_map is not None, "Error: weights_idx_map is of type None"
+                weights_idxs = list(map(lambda x:learner.acq_weights_idx_map[x.item()], data[2]))
                 # s_idx, e_idx = opt.batch_size * i, opt.batch_size * (i + 1)
                 # print(f"{s_idx} to {e_idx}\nWeights: {weights[weights_idxs]}")
                 learner.model.optimize_parameters(learner.acq_weights[weights_idxs])
@@ -118,7 +116,7 @@ def active_learning_procedure(
         train_func=train,
         val_func=validate,
     )
-
+    
     # track already queried idxs
     pool_idxs = np.array(range(len(pool_dataset)))
 

@@ -153,7 +153,7 @@ def loss_weighted_max_entropy(
     Modified version of Max Entropy.
     Weighs each sample's uncertainty score by their individual loss.
     Performs Min-Max Additive 1 normalization on the Shannon Entropy scores
-    to prevent uncertainty scores of 0 from not being influenced by high loss.
+    to prevent uncertainty scores of 0 from not being influenced by high loss. 
     Then, multiplies normalized uncertainty scores by individual loss directly.
     """
     outputs, random_subset, targets = predictions_from_pool(
@@ -253,6 +253,7 @@ def loss_weighted_bald(
         outputs * np.log(outputs + 1e-10) + (1 - outputs) * np.log(1 - outputs + 1e-10), axis=0
     )
     acquisition = H - E_H
+
     # compute loss
     loss_fn = BCELoss(reduction="none")
     pc = torch.from_numpy(pc)
@@ -335,6 +336,7 @@ def loss_weighted_var_ratios(
     acquisition = (1 - count / T).reshape((-1,))
     # compute loss
     loss_fn = BCELoss(reduction="none")
+    pc = outputs.mean(axis=0)
     pc = torch.from_numpy(pc)
     loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
     # compute weighted acquisition (uncertainty) using loss
@@ -421,9 +423,10 @@ def loss_weighted_mean_std(
 
     sigma_c = np.std(probs, axis=0)
     acquisition = np.mean(sigma_c, axis=-1)
-
+    
     # compute loss
     loss_fn = BCELoss(reduction="none")
+    pc = outputs.mean(axis=0)
     pc = torch.from_numpy(pc)
     loss = loss_fn(pc, targets.float()).detach().cpu().numpy()
     # compute weighted acquisition (uncertainty) using loss
@@ -453,7 +456,7 @@ def balance_acquisition(acquisition: np.ndarray, targets: torch.Tensor, n_query)
     # parse acquisition based on class
     pos_acq = acquisition[pos_cls_idxs]
     neg_acq = acquisition[neg_cls_idxs]
-    # get indices for samples w/ highest uncertainty
+    # get indices for samples w/ highest uncertainty 
     pos_query_idxs = (-pos_acq).argsort()[:n_query]
     neg_query_idxs = (-neg_acq).argsort()[:n_query]
     # concat both idxs
@@ -465,5 +468,5 @@ def minmax_additive_norm(query_scores):
     """Perform Min-Max Normalization w/ additive 1 constant"""
     wl = query_scores
     # 1e-10 prevents division by zero
-    norm = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1) + 1e-10)) + 1
+    norm = ((wl - min(wl.min(), 0.1)) / (wl.max() - min(wl.min(), 0.1) + 1e-10)) + 1 
     return norm

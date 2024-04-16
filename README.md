@@ -64,7 +64,9 @@ To run training with Active Learning:
 ```bash
 bash UniversalFakeDetect/train_active_learning.sh
 ```
+
 Note: testing is automatically performed after Active Learning training finishes. The results dict will be printed to the output log file.
+
 
 
 ## Performing Inference
@@ -73,12 +75,14 @@ Run the following to perform inference for either normal or active learning chec
 bash UniversalFakeDetect/test.sh
 ```
 
+
 ## LLaVA Real-Fake Explainer
 ### Training data
 Explainer training data is generated with LLaVA 1.6-7b and source category-guided prompts as shown in `LLaVA_Experiments/llava_train_data.py`. The `real_fake_llava_train.json` file can be found [here](https://wpi0-my.sharepoint.com/:f:/g/personal/simran_wpi_edu/EjYNAq_1KQlImgOQlwbpZZQBvx7SfIxwpYqibTw3PBE90A?e=55azN8).
 
 ### Test Explanations
 Human-like reasoning behind why our LoRA (PEFT) finetuned LLaVA model thinks a test image is real or fake can be found [here](https://wpi0-my.sharepoint.com/:f:/g/personal/simran_wpi_edu/EjYNAq_1KQlImgOQlwbpZZQBvx7SfIxwpYqibTw3PBE90A?e=55azN8) in the `test_explanations_and_classifications.txt` file.
+
 
 ## Acknowledgements
 1. https://github.com/lunayht/DBALwithImgData

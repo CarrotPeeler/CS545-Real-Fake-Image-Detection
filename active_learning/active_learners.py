@@ -5,8 +5,8 @@ import torch
 from modAL.models.base import BaseLearner
 from torch.utils.data import ConcatDataset, Dataset, Subset
 
-from active_learning.acquisition_functions import minmax_additive_norm
 from UniversalFakeDetect.networks.trainer import Trainer
+from active_learning.acquisition_functions import minmax_additive_norm 
 
 
 class TorchActiveLearner(BaseLearner):
@@ -61,7 +61,7 @@ class TorchActiveLearner(BaseLearner):
         if train_dataset is not None and opt.use_weighted_loss:
             self.acq_weights = torch.ones(len(train_dataset)).to(model.device)
             # map sample idx in dataset to corresponding weight idx in acq_weights
-            self.acq_weights_idx_map = {k: k for k in range(len(train_dataset))}
+            self.acq_weights_idx_map = {k:k for k in range(len(train_dataset))} 
         else:
             self.acq_weights = None
             self.acq_weights_idx_map = None
@@ -83,28 +83,28 @@ class TorchActiveLearner(BaseLearner):
         query_weights = np.power(query_weights, 3)
         query_weights = torch.tensor(query_weights).to(self.model.device)
         return query_weights
-
+    
     def regress_acq_weights(self, iter: int, decay_rate=0.99):
         """
         Perform exponential decay on weights for sample loss.
-        Decay is based on how many iterations have passed.
+        Decay is based on how many iterations have passed. 
         """
         if iter > 0:
             self.acq_weights *= decay_rate
             self.acq_weights[self.acq_weights < 1] = 1
-
+    
     def add_to_weights_idx_map(self, query_scores: np.ndarray, query_idxs: np.ndarray):
         """
-        Maps a sample's dataset index to an index corresponding to where its weight value
+        Maps a sample's dataset index to an index corresponding to where its weight value 
         is stored in the self.acq_weights array.
         """
         for i in range(len(query_idxs)):
             # shift idxs by init dataset size to avoid idx collision
-            dataset_idx = query_idxs[i] + (self.opt.num_samples_per_class * 2)
+            dataset_idx = query_idxs[i] + (self.opt.num_samples_per_class * 2) 
             # compute corresponding weight idx in self.acq_weights
             acq_weights_idx = len(self.acq_weights) - len(query_scores) + i
             # store mapping
-            self.acq_weights_idx_map[dataset_idx] = acq_weights_idx
+            self.acq_weights_idx_map[dataset_idx] = acq_weights_idx        
 
     def _add_training_data(self, dataset: Dataset, query_scores=None, query_idxs=None) -> None:
         """
@@ -125,7 +125,7 @@ class TorchActiveLearner(BaseLearner):
 
             if self.opt.use_weighted_loss:
                 self.acq_weights = torch.ones(len(dataset)).to(self.model.device)
-                self.acq_weights_idx_map = {k: k for k in range(len(dataset))}
+                self.acq_weights_idx_map = {k:k for k in range(len(dataset))}
         else:
             self.train_dataset = ConcatDataset([self.train_dataset, dataset])
 
