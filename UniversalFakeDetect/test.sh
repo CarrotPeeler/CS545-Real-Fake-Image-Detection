@@ -1,1 +1,1 @@
-python3 UniversalFakeDetect/validate.py --arch=CLIP:RN50 --ckpt=checkpoints/clip_rn50/model_epoch_5.pth --result_folder=UniversalFakeDetect/results/clip_fixed_data_rn50_5ep < /dev/null > val_clip_rn50_5ep.txt 2>&1 &
+python3 UniversalFakeDetect/validate.py --arch=CLIP:RN50 --ckpt=checkpoints/clip_rn50_bal_weighted_loss_LWMS_Tuned/best.pth --result_folder=UniversalFakeDetect/results/clip_fixed_data_rn50_bal_weighted_LWMS_65_iter < /dev/null > val_clip_rn50_af9.txt 2>&1 &
