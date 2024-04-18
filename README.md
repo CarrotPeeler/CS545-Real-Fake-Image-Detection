@@ -82,6 +82,7 @@ Note: testing is automatically performed after Active Learning training finishes
 
 
 ### Performing Inference
+First in UniversalFakeDetect folder, go to dataset_paths.py and edit the first line of code, `ROOT=`, with the path to your sentry subset folder. 
 Run the following to perform inference for either normal or active learning checkpoints. Make sure to edit the path arguments for the checkpoint file and the save directory.
 ```bash
 bash UniversalFakeDetect/test.sh
