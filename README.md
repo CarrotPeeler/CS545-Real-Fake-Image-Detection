@@ -39,7 +39,7 @@ We leverage Active Learning in an attempt to improve/maintain model performance 
 An example of how to use the Active Learning code is located in [UniversalFakeDetect/train.py](https://github.com/CarrotPeeler/CS545-Real-Fake-Image-Detection/blob/main/UniversalFakeDetect/train.py) under the `train_active_learning()` function.
 
 
-## Available Models
+### Available Models
 The models currently available are listed below. The names listed can be directly input as an argument for the `--arch` option.
 - Imagenet:resnet18
 - Imagenet:resnet34
@@ -53,8 +53,20 @@ The models currently available are listed below. The names listed can be directl
 - CLIP:RN101
 - CLIP:ViT-L/14
 
+### Available Acquisition Functions for Active Learning
+The numbers associated with each can be directly input as an argument for the `--acq_func` option.
+1. Random Uniform Sampling
+2. Max Entropy
+3. BALD
+4. Variational Ratios
+5. Mean Standard Deviation
+6. Loss Weighted Max Entropy
+7. Loss Weighted BALD
+8. Loss Weighted Variational Ratios
+9. Loss Weighted Mean Standard Deviation
 
-## Training the Models
+
+### Training the Models
 Run the `train_normal.sh` script for normal training without Active Learning. Edit the arguments in the script to change the model and adjust training hyperparameters.
 ```bash
 bash UniversalFakeDetect/train_normal.sh
@@ -69,7 +81,7 @@ Note: testing is automatically performed after Active Learning training finishes
 
 
 
-## Performing Inference
+### Performing Inference
 Run the following to perform inference for either normal or active learning checkpoints. Make sure to edit the path arguments for the checkpoint file and the save directory.
 ```bash
 bash UniversalFakeDetect/test.sh
