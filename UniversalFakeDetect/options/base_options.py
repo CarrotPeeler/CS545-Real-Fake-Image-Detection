@@ -116,6 +116,13 @@ class BaseOptions:
             help="Active Learning Iterations (Training Loops)",
         )
         parser.add_argument(
+            "--al_earlystop_metric",
+            type=str,
+            default='acc',
+            help="acc or ap",
+        )
+        
+        parser.add_argument(
             "--query",
             type=int,
             default=1000,

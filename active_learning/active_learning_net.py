@@ -174,7 +174,13 @@ def active_learning_procedure(
                   | AP: {ap:0.4f}"
             )
 
-            early_stopping(acc, learner.model)
+            if opt.al_earlystop_metric == 'acc':
+                earlystop_metric = acc
+            elif opt.al_earlystop_metric == 'ap':
+                earlystop_metric = ap
+                
+            early_stopping(earlystop_metric, learner.model)
+
             if early_stopping.early_stop:
                 cont_train = learner.model.adjust_learning_rate()
                 if cont_train:
