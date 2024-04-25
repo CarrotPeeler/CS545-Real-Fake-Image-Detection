@@ -67,10 +67,10 @@ class TorchActiveLearner(BaseLearner):
             self.acq_weights_idx_map = None
 
         if train_dataset is not None:
-            self._fit_to_known(bootstrap=bootstrap_init, **fit_kwargs)
+            self._fit_to_known(epochs=opt.al_niter_warmup, bootstrap=bootstrap_init, **fit_kwargs)
 
-    def train(self, dataset: Dataset):
-        self.train_func(self.opt, self, dataset)
+    def train(self, epochs:int, dataset: Dataset):
+        self.train_func(self.opt, epochs, self, dataset)
 
     def validate(self, dataset: Dataset):
         return self.val_func(self.opt, self, dataset)
@@ -137,7 +137,7 @@ class TorchActiveLearner(BaseLearner):
                 self.add_to_weights_idx_map(query_scores, query_idxs)
         print(f"Updated Train Size: {len(self.train_dataset)}")
 
-    def _fit_to_known(self, bootstrap: bool = False, **fit_kwargs) -> "BaseLearner":
+    def _fit_to_known(self, epochs:int, bootstrap: bool = False, **fit_kwargs) -> "BaseLearner":
         """
         Fits self.model to the training data and labels provided to it so far.
 
@@ -151,7 +151,7 @@ class TorchActiveLearner(BaseLearner):
             self
         """
         if not bootstrap:
-            self.train(self.train_dataset)
+            self.train(epochs, self.train_dataset)
         else:
             n_instances = len(self.train_dataset)
 
@@ -159,11 +159,11 @@ class TorchActiveLearner(BaseLearner):
 
             bootstrapped_dataset = Subset(self.train_dataset, bootstrap_idx)
 
-            self.train(bootstrapped_dataset)
+            self.train(epochs, bootstrapped_dataset)
 
         return self
 
-    def fit(self, dataset: Dataset, bootstrap: bool = False, **fit_kwargs) -> "BaseLearner":
+    def fit(self, epochs:int, dataset: Dataset, bootstrap: bool = False, **fit_kwargs) -> "BaseLearner":
         """
         Interface for the fit method of the predictor.
         Fits the predictor to the supplied data, then stores it
@@ -185,10 +185,10 @@ class TorchActiveLearner(BaseLearner):
             self
         """
         self.train_dataset = dataset
-        return self._fit_to_known(bootstrap=bootstrap, **fit_kwargs)
+        return self._fit_to_known(epochs, bootstrap=bootstrap, **fit_kwargs)
 
     def _fit_on_new(
-        self, dataset: Dataset, bootstrap: bool = False, **fit_kwargs
+        self, epochs:int, dataset: Dataset, bootstrap: bool = False, **fit_kwargs
     ) -> "BaseLearner":
         """
         Fits self.estimator to the given data and labels.
@@ -205,7 +205,7 @@ class TorchActiveLearner(BaseLearner):
             self
         """
         if not bootstrap:
-            self.train(dataset)
+            self.train(epochs, dataset)
         else:
             n_instances = len(dataset)
 
@@ -213,7 +213,7 @@ class TorchActiveLearner(BaseLearner):
 
             bootstrapped_dataset = Subset(dataset, bootstrap_idx)
 
-            self.train(bootstrapped_dataset)
+            self.train(epochs, bootstrapped_dataset)
 
         return self
 
@@ -245,7 +245,7 @@ class TorchActiveLearner(BaseLearner):
         """
         if not only_new:
             self._add_training_data(dataset, query_scores, query_idxs)
-            self._fit_to_known(bootstrap=bootstrap, **fit_kwargs)
+            self._fit_to_known(epochs=self.opt.niter, bootstrap=bootstrap, **fit_kwargs)
         else:
             self._fit_on_new(dataset, bootstrap=bootstrap, **fit_kwargs)
 

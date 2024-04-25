@@ -116,6 +116,12 @@ class BaseOptions:
             help="Active Learning Iterations (Training Loops)",
         )
         parser.add_argument(
+            "--al_niter_warmup",
+            type=int,
+            default=30,
+            help="number of train epochs for initial data",
+        )
+        parser.add_argument(
             "--al_earlystop_metric",
             type=str,
             default='acc',

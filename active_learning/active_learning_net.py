@@ -17,7 +17,7 @@ from UniversalFakeDetect.networks.trainer import Trainer
 from UniversalFakeDetect.validate import validate as val
 
 
-def train(opt, learner: TorchActiveLearner, train_dataset: Dataset):
+def train(opt, epochs:int, learner: TorchActiveLearner, train_dataset: Dataset):
     """Generic PyTorch train function"""
     train_loader = create_dataloader(opt, premade_dataset=train_dataset)
 
@@ -27,7 +27,7 @@ def train(opt, learner: TorchActiveLearner, train_dataset: Dataset):
         du.init_distributed_training(len(opt.gpu_ids), opt.shard_id)
 
     # run training epochs
-    for epoch in tqdm(range(opt.niter)):
+    for epoch in tqdm(range(epochs)):
         ep_s_t = time.time()
 
         # set current epoch for the data loader
