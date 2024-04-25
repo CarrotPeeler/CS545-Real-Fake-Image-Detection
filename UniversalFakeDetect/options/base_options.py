@@ -92,6 +92,12 @@ class BaseOptions:
             help="enable or disable weighted loss for Active Learning",
         )
         parser.add_argument(
+            "--weighted_loss_decay",
+            type=float,
+            default=0.99,
+            help="decay rate for weighted loss",
+        )
+        parser.add_argument(
             "--balance_acquisition",
             action="store_true",
             help="enable or disable class balancing for the query step in Active Learning",

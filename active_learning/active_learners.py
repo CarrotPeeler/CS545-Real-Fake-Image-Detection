@@ -84,11 +84,12 @@ class TorchActiveLearner(BaseLearner):
         query_weights = torch.tensor(query_weights).to(self.model.device)
         return query_weights
     
-    def regress_acq_weights(self, iter: int, decay_rate=0.99):
+    def regress_acq_weights(self, iter: int):
         """
         Perform exponential decay on weights for sample loss.
         Decay is based on how many iterations have passed. 
         """
+        decay_rate = self.opt.weighted_loss_decay
         if iter > 0:
             self.acq_weights *= decay_rate
             self.acq_weights[self.acq_weights < 1] = 1
