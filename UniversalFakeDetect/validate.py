@@ -254,9 +254,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--arch", type=str, default="res50")
     parser.add_argument("--ckpt", type=str, default="./pretrained_weights/fc_weights.pth")
+    parser.add_argument("--use_fc_weights", action="store_true", help="use to load final layer weights only")
 
     parser.add_argument("--result_folder", type=str, default="result", help="")
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
 
     parser.add_argument(
@@ -279,11 +280,14 @@ if __name__ == "__main__":
     os.makedirs(opt.result_folder)
 
     model = get_model(opt.arch)
-    state_dict = torch.load(opt.ckpt, map_location="cpu")
-    if "model" in list(state_dict.keys()):
+    if opt.use_fc_weights:
+        state_dict = torch.load(opt.ckpt, map_location="cpu")
         state_dict = state_dict["model"]
         state_dict = {"weight": state_dict["fc.weight"], "bias": state_dict["fc.bias"]}
-    model.fc.load_state_dict(state_dict)
+        model.fc.load_state_dict(state_dict)
+    else:
+        state_dict = torch.load(opt.ckpt, map_location="cpu")
+        model.load_state_dict(state_dict["model"])
     print("Model loaded..")
     model.eval()
     model.to(opt.gpu_id)
